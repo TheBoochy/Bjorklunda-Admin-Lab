@@ -296,6 +296,132 @@ I can check service status with `systemctl status service-name`, read service de
 
 ---
 
+### Troubleshooting checks
+
+I performed troubleshooting checks on `srv-linux01` to verify that important server functions were working correctly.
+
+### SSH service check
+
+Command used:
+
+```bash
+~/signature.sh
+systemctl status sshd --no-pager
+```
+
+The command `systemctl status sshd` checks the status of the OpenSSH server service. SSH is used for secure remote administration of the server.
+
+In the output, I looked for `active (running)`, which means that the SSH service is started and working.
+
+If SSH was stopped, the output would show `inactive`, `failed` or `dead`. To start SSH again, I would use:
+
+```bash
+sudo systemctl start sshd
+```
+
+To make sure SSH starts automatically after reboot, I would use:
+
+```bash
+sudo systemctl enable sshd
+```
+
+![Screenshot 08 - SSH service status](screenshots/screenshot-08.png)
+
+### Hostname check
+
+Command used:
+
+```bash
+~/signature.sh
+hostnamectl
+```
+
+The command `hostnamectl` shows the system hostname and basic system information.
+
+The output confirmed that the static hostname was set to:
+
+`srv-linux01.bjorklunda.local`
+
+If the hostname was wrong, it could cause problems with DNS, certificates, authentication and communication with other servers. To correct the hostname, I would use:
+
+```bash
+sudo hostnamectl set-hostname srv-linux01.bjorklunda.local
+```
+
+![Screenshot 09 - Hostname check](screenshots/screenshot-09.png)
+
+### IP address check
+
+Command used:
+
+```bash
+~/signature.sh
+ip addr show ens160
+```
+
+The command `ip addr show ens160` shows IP address information for the network interface `ens160`.
+
+The output confirmed that the server had the planned static IP address:
+
+`192.168.80.10/24`
+
+If the IP address was missing or incorrect, the server might not be reachable on the network. To troubleshoot this, I would check the NetworkManager connection with:
+
+```bash
+nmcli connection show
+```
+
+Then I would correct the IP settings with `nmcli` or through the installer/network configuration.
+
+![Screenshot 10 - IP address check](screenshots/screenshot-10.png)
+
+### Partition and mount check
+
+Command used:
+
+```bash
+~/signature.sh
+lsblk
+df -h
+```
+
+The command `lsblk` shows the disk and partition layout.
+
+The command `df -h` shows mounted filesystems and disk usage in a human-readable format.
+
+The output confirmed that the planned partitions and mount points were present, including `/`, `/home`, `/boot` and `/boot/efi`.
+
+If a partition was mounted in the wrong place, files could be stored on the wrong filesystem or services could fail to find their data. I would troubleshoot this by checking `/etc/fstab`, using `lsblk`, `df -h`, and testing mounts with:
+
+```bash
+sudo mount -a
+```
+
+![Screenshot 11 - Partition and mount check](screenshots/screenshot-11.png)
+
+### Network connectivity check
+
+Command used:
+
+```bash
+~/signature.sh
+ping -c 4 192.168.80.2
+ping -c 4 8.8.8.8
+```
+
+The command `ping -c 4 192.168.80.2` tested connectivity to the VMware NAT gateway.
+
+The command `ping -c 4 8.8.8.8` tested internet connectivity by IP address.
+
+Both tests showed `0% packet loss`, which means the server could reach both the local gateway and the internet.
+
+If the gateway ping failed, I would check the IP address, gateway, subnet mask and VMware NAT settings.
+
+If the gateway ping worked but the internet ping failed, I would check NAT, firewall settings and DNS/internet access from the host computer.
+
+![Screenshot 12 - Network connectivity check](screenshots/screenshot-12.png)
+
+
 ## Part 4 — Windows Server and Active Directory
 
 ## Part 5 — Account management with scripts
