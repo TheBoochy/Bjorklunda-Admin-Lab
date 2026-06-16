@@ -421,6 +421,27 @@ If the gateway ping worked but the internet ping failed, I would check NAT, fire
 
 ![Screenshot 12 - Network connectivity check](screenshots/screenshot-12.png)
 
+### VM snapshot after Part 3
+
+After completing the installation, verification, service checks and troubleshooting checks for `srv-linux01`, I shut down the server cleanly and created a VMware snapshot.
+
+Snapshot name:
+
+`Part 3 complete - srv-linux01 installed and verified`
+
+The purpose of this snapshot is to create a safe rollback point before continuing with Windows Server, Active Directory and RHEL IdM. If a later configuration breaks the lab environment, I can restore `srv-linux01` to this working state instead of reinstalling it.
+
+The snapshot was taken after confirming:
+
+- RHEL 10.1 was installed
+- Static IP address `192.168.80.10/24` was configured
+- Hostname `srv-linux01.bjorklunda.local` was configured
+- SSH was working
+- The signature script was working
+- Running services and listening ports were checked
+- Troubleshooting checks were completed
+
+![srv-linux01 Part 3 snapshot](screenshots/screenshot-srv-linux01-part3-snapshot.png)
 
 ## Part 4 — Windows Server and Active Directory
 
