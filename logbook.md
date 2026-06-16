@@ -91,8 +91,6 @@ After pushing, `git status` showed that the working tree was clean and up to dat
 
 ## Part 2 — Planning
 
-## Part 2 — Planning
-
 In this part I planned the server environment before starting the installation. The environment will contain three servers: one RHEL application server, one RHEL Identity Management server, and one Windows Server domain controller.
 
 ### Server roles
@@ -158,8 +156,145 @@ Planned network mode in VMware: NAT.
 
 I chose NAT because it gives the virtual machines network access through the host computer while keeping the lab separated from the rest of the physical network. This is safer for a school and portfolio lab because the servers can communicate in the virtual network without exposing everything directly to the home network.
 
+---
 
 ## Part 3 — Linux server installation
+
+I created and installed the RHEL server `srv-linux01`.
+
+The server was installed with the hostname:
+
+`srv-linux01.bjorklunda.local`
+
+I used VMware NAT networking because it keeps the lab environment separated from the physical network while still allowing internet access through the host computer.
+
+The static network configuration for `srv-linux01` is:
+
+| Setting    | Value                          |
+| ---------- | ------------------------------ |
+| IP address | `192.168.80.10/24`             |
+| Gateway    | `192.168.80.2`                 |
+| DNS        | `192.168.80.2`                 |
+| Hostname   | `srv-linux01.bjorklunda.local` |
+
+### Installation screenshots
+
+The manual partitioning screen was saved as:
+
+![Screenshot 01 - Manual partitioning](screenshots/screenshot-01.png)
+
+The network and hostname configuration screen was saved as:
+
+![Screenshot 02 - Network and hostname](screenshots/screenshot-02.png)
+
+### Verification commands
+
+I verified the installation with these commands:
+
+```bash
+lsblk
+df -h
+ip addr show
+hostnamectl
+cat /etc/os-release
+```
+
+The command `lsblk` showed the disk and partition layout. This confirmed that the server disk was divided into the planned partitions.
+
+The command `df -h` showed mounted filesystems and disk usage in a human-readable format. This confirmed that the partitions were mounted correctly.
+
+The command `ip addr show` showed the network interfaces and IP addresses. This confirmed that `srv-linux01` had the static IP address `192.168.80.10/24`.
+
+The command `hostnamectl` showed the configured hostname and system information. This confirmed that the hostname was set to `srv-linux01.bjorklunda.local`.
+
+The command `cat /etc/os-release` showed the installed operating system version. This confirmed that the server is running Red Hat Enterprise Linux 10.1.
+
+![Screenshot 03 - Disk and filesystem verification](screenshots/screenshot-03.png)
+
+![Screenshot 04 - Network and hostname verification](screenshots/screenshot-04.png)
+
+### Signature script activation
+
+I copied the Linux signature script from my Windows host to `srv-linux01` using `scp`.
+
+Command used from the Windows host:
+
+```powershell
+scp scripts/signature.sh vulkan@192.168.80.10:~/signature.sh
+```
+
+The command `scp` copies files securely over SSH. I used it to copy `signature.sh` from my local `scripts/` folder to the home folder of the user `vulkan` on `srv-linux01`.
+
+On `srv-linux01`, I made the script executable with:
+
+```bash
+chmod +x ~/signature.sh
+```
+
+The command `chmod +x` gives the script permission to run as a program.
+
+I tested the script with:
+
+```bash
+~/signature.sh
+```
+
+The script printed my name, email, timestamp, hostname and IP address.
+
+![Screenshot 07 - Linux signature script](screenshots/screenshot-07.png)
+
+### Running services and listening ports
+
+I checked which services were running on `srv-linux01` with:
+
+```bash
+~/signature.sh
+systemctl list-units --type=service --state=running --no-pager
+```
+
+The command `systemctl list-units --type=service --state=running` lists active systemd services. This shows which background services are currently running on the server.
+
+![Screenshot 05 - Running services](screenshots/screenshot-05.png)
+
+I checked listening TCP ports with:
+
+```bash
+~/signature.sh
+ss -tlnp
+```
+
+The command `ss -tlnp` shows TCP ports that are listening for incoming connections. The output showed that SSH is listening on port `22`, and Cockpit is listening on port `9090`.
+
+![Screenshot 06 - Listening ports](screenshots/screenshot-06.png)
+
+I checked the network device status with:
+
+```bash
+nmcli device status
+```
+
+The output showed that `ens160` is an Ethernet interface and that it is connected. The `lo` interface is the local loopback interface, which the system uses to communicate with itself.
+
+### Service questions
+
+**Three running services and what they do**
+
+| Service                  | Explanation                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sshd.service`           | This is the OpenSSH server service. It allows remote login to the server through SSH. This is needed so administrators can manage the server remotely. |
+| `NetworkManager.service` | This manages network connections and network configuration. It is needed so the server can use its IP address, gateway and DNS settings.               |
+| `firewalld.service`      | This manages firewall rules. It is needed to control which network traffic is allowed to reach the server.                                             |
+
+**Which port does SSH listen on and what is it used for?**
+SSH listens on TCP port `22`. It is used for secure remote login and administration of the server.
+
+**What would happen if a critical service was stopped?**
+If a critical service was stopped, parts of the server could stop working. For example, if `sshd.service` stopped, remote SSH login would no longer work. If `NetworkManager.service` stopped or was misconfigured, the server could lose network connectivity.
+
+**How can I find out which services are critical?**
+I can check service status with `systemctl status service-name`, read service descriptions with `systemctl cat service-name`, check logs with `journalctl -u service-name`, and look at what other services depend on it with `systemctl list-dependencies service-name`.
+
+---
 
 ## Part 4 — Windows Server and Active Directory
 
