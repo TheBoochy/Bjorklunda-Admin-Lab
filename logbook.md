@@ -445,8 +445,6 @@ The snapshot was taken after confirming:
 
 ## Part 4 — Windows Server and Active Directory
 
-## Part 4 — Windows Server and Active Directory
-
 In this part I installed and configured the Windows Server domain controller `srv-dc01`.
 
 The server was installed with Windows Server 2025 and configured as the Windows domain controller for the lab environment.
@@ -624,6 +622,88 @@ The output showed successful replies, which means `srv-dc01` can reach `srv-linu
 ![Screenshot 14 - Windows to Linux ping](screenshots/screenshot-14.png)
 
 The successful ping tests confirm that both servers are on the same VMware NAT network and can communicate with each other.
+
+### Organizational Unit structure
+
+I created a custom Organizational Unit structure inside Active Directory Users and Computers.
+
+The main OU is:
+
+`Bjorklunda`
+
+Inside `Bjorklunda`, I created these OUs:
+
+* `Users`
+* `Groups`
+* `Computers`
+* `Servers`
+* `Departments`
+
+Inside `Departments`, I created these department OUs:
+
+* `IT`
+* `HR`
+* `Finance`
+* `Education`
+
+An Organizational Unit, OU, is used to organize Active Directory objects such as users, groups and computers. OUs also make it possible to apply Group Policy settings to specific parts of the domain instead of applying the same settings everywhere.
+
+The OU structure was created in Active Directory Users and Computers.
+
+![Screenshot 20 - Active Directory OU structure](screenshots/screenshot-20.png)
+
+### Active Directory groups
+
+I created four global security groups inside:
+
+`Bjorklunda > Groups`
+
+Groups created:
+
+| Group                | Type                  | Purpose                   |
+| -------------------- | --------------------- | ------------------------- |
+| `GG_IT_Users`        | Global security group | Group for IT users        |
+| `GG_HR_Users`        | Global security group | Group for HR users        |
+| `GG_Finance_Users`   | Global security group | Group for Finance users   |
+| `GG_Education_Users` | Global security group | Group for Education users |
+
+A security group can be used to assign permissions to several users at once. This is better than giving permissions directly to individual users, because group-based permissions are easier to manage and audit.
+
+The prefix `GG_` means Global Group. I used this naming style to make the group purpose clearer.
+
+![AD groups created](screenshots/screenshot-ad-groups-created.png)
+
+### Active Directory users
+
+I created four test users inside:
+
+`Bjorklunda > Users`
+
+Users created:
+
+| Display name       | User logon name    | Department |
+| ------------------ | ------------------ | ---------- |
+| `IT User01`        | `it.user01`        | IT         |
+| `HR User01`        | `hr.user01`        | HR         |
+| `Finance User01`   | `finance.user01`   | Finance    |
+| `Education User01` | `education.user01` | Education  |
+
+The users were created as test accounts for the lab environment. Each user represents one department.
+
+![Screenshot 21 - AD users created](screenshots/screenshot-21.png)
+
+### Group membership
+
+Each test user was added to the matching department group:
+
+| User               | Group                |
+| ------------------ | -------------------- |
+| `it.user01`        | `GG_IT_Users`        |
+| `hr.user01`        | `GG_HR_Users`        |
+| `finance.user01`   | `GG_Finance_Users`   |
+| `education.user01` | `GG_Education_Users` |
+
+This means permissions can later be assigned to the groups instead of directly to the users. For example, if the IT department needs access to a folder, the folder permission can be assigned to `GG_IT_Users`.
 
 
 ## Part 5 — Account management with scripts
