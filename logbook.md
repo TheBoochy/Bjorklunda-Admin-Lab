@@ -708,6 +708,168 @@ This means permissions can later be assigned to the groups instead of directly t
 
 ## Part 5 — Account management with scripts
 
+In this part I started preparing account management scripts for the Björklunda Admin Lab.
+
+The goal of this part is to show how user and group management can be automated instead of creating every account manually.
+
+In a real administration environment, scripting is useful because it makes account creation faster, more consistent and easier to repeat. It also reduces the risk of small manual mistakes, such as placing a user in the wrong OU or forgetting a group membership.
+
+### PowerShell script for Active Directory users and groups
+
+I created a PowerShell script for Active Directory account management.
+
+Script file:
+
+`scripts/create_ad_users_groups.ps1`
+
+The purpose of this script is to create and verify the Active Directory OU structure, groups, users and group memberships for the lab environment.
+
+The script is designed to work with the domain:
+
+`bjorklunda.local`
+
+It uses the Active Directory PowerShell module:
+
+```powershell
+Import-Module ActiveDirectory
+```
+
+The command `Import-Module ActiveDirectory` loads the PowerShell commands used to manage Active Directory, such as commands for users, groups and organizational units.
+
+The script defines these important AD paths:
+
+```powershell
+$DomainDN = "DC=bjorklunda,DC=local"
+$MainOU = "OU=Bjorklunda,$DomainDN"
+$UsersOU = "OU=Users,$MainOU"
+$GroupsOU = "OU=Groups,$MainOU"
+$DepartmentsOU = "OU=Departments,$MainOU"
+```
+
+These variables make the script easier to read and maintain. Instead of writing the full OU path many times, the script stores the paths in variables.
+
+### OU creation logic
+
+The script contains a function called:
+
+```powershell
+Ensure-OU
+```
+
+The purpose of this function is to create an OU only if it does not already exist.
+
+This is important because a script should be safe to run more than once. If the OU already exists, the script should not create a duplicate or stop with unnecessary errors.
+
+The script creates the main OU structure:
+
+* `Bjorklunda`
+* `Users`
+* `Groups`
+* `Computers`
+* `Servers`
+* `Departments`
+* `IT`
+* `HR`
+* `Finance`
+* `Education`
+
+### Group creation logic
+
+The script contains a function called:
+
+```powershell
+Ensure-Group
+```
+
+The purpose of this function is to create a group only if it does not already exist.
+
+The script is prepared to create these global security groups:
+
+| Group                | Purpose                   |
+| -------------------- | ------------------------- |
+| `GG_IT_Users`        | Group for IT users        |
+| `GG_HR_Users`        | Group for HR users        |
+| `GG_Finance_Users`   | Group for Finance users   |
+| `GG_Education_Users` | Group for Education users |
+
+The groups are global security groups, which means they can be used for assigning permissions to users in this domain.
+
+### User creation logic
+
+The script contains a function called:
+
+```powershell
+Ensure-User
+```
+
+The purpose of this function is to create a user only if it does not already exist.
+
+The script is prepared to create these test users:
+
+| User               | Logon name         | Group                |
+| ------------------ | ------------------ | -------------------- |
+| `IT User01`        | `it.user01`        | `GG_IT_Users`        |
+| `HR User01`        | `hr.user01`        | `GG_HR_Users`        |
+| `Finance User01`   | `finance.user01`   | `GG_Finance_Users`   |
+| `Education User01` | `education.user01` | `GG_Education_Users` |
+
+The script uses a temporary lab password and sets the accounts to require a password change at next logon.
+
+This is useful because the administrator can create accounts with a temporary password, but the user must choose their own password when they first log in.
+
+### Group membership logic
+
+The script uses:
+
+```powershell
+Add-ADGroupMember
+```
+
+The command `Add-ADGroupMember` adds users to Active Directory groups.
+
+This means permissions can later be assigned to the groups instead of directly to individual users.
+
+For example, if the IT department needs access to an IT folder, the permission can be assigned to `GG_IT_Users`. Any IT user who is a member of that group will then receive the correct access.
+
+### Verification script
+
+I also created a verification script.
+
+Script file:
+
+`scripts/verify_ad_users_groups.ps1`
+
+The purpose of this script is to verify which users and groups exist in the Björklunda OUs and to show group membership.
+
+The script checks:
+
+* users inside `Bjorklunda > Users`
+* groups inside `Bjorklunda > Groups`
+* members of each department group
+
+This makes it easier to prove that the account structure exists and that users are placed in the correct groups.
+
+### Script screenshot
+
+I saved a screenshot showing the Part 5 scripts in VS Code.
+
+![Screenshot 22 - AD account management scripts](screenshots/screenshot-22.png)
+
+### Notes about the lab workflow
+
+The AD users and groups were first created manually in Active Directory Users and Computers because VMware clipboard paste caused formatting problems when trying to paste longer PowerShell commands into the Windows Server VM.
+
+After that, I created scripts in the repository to document how the same structure can be automated.
+
+This is useful for the portfolio because the scripts show the intended automation logic even if the first setup was done manually.
+
+### Part 5 status
+
+The Active Directory script preparation is completed.
+
+The IdM Bash script part is still pending because `srv-idm01` has not been fully configured yet in this lab workflow. When the IdM server is ready, the Bash account creation script and IdM user verification can be added.
+
+
 ## Part 6 — Shared folders and permissions
 
 ## Part 7 — Printing system
