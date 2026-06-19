@@ -445,6 +445,187 @@ The snapshot was taken after confirming:
 
 ## Part 4 — Windows Server and Active Directory
 
+## Part 4 — Windows Server and Active Directory
+
+In this part I installed and configured the Windows Server domain controller `srv-dc01`.
+
+The server was installed with Windows Server 2025 and configured as the Windows domain controller for the lab environment.
+
+### Windows Server installation
+
+I created a VMware virtual machine for `srv-dc01` with the following settings:
+
+| Setting          | Value               |
+| ---------------- | ------------------- |
+| VM name          | `srv-dc01`          |
+| Operating system | Windows Server 2025 |
+| Memory           | 4 GB                |
+| Processors       | 2                   |
+| Disk             | 60 GB               |
+| Network mode     | NAT                 |
+
+The Windows Server installer created the required system, reserved and primary partitions automatically.
+
+![Windows Server disk layout](screenshots/screenshot-windows-install-disk-layout.png)
+
+### Hostname and network configuration
+
+After installation, I renamed the server to:
+
+`srv-dc01`
+
+I configured the server with a static IP address so that it can be used reliably as a domain controller and DNS server.
+
+Network configuration:
+
+| Setting         | Value           |
+| --------------- | --------------- |
+| Hostname        | `srv-dc01`      |
+| IP address      | `192.168.80.12` |
+| Subnet mask     | `255.255.255.0` |
+| Default gateway | `192.168.80.2`  |
+| DNS server      | `192.168.80.12` |
+
+The DNS server was set to `192.168.80.12` because the server will run DNS for the Active Directory domain.
+
+The configuration was verified with:
+
+```powershell
+ipconfig /all
+```
+
+The command `ipconfig /all` shows the full network configuration, including hostname, IP address, gateway and DNS server.
+
+![Windows Server IP configuration](screenshots/screenshot-windows-ipconfig-before-ad.png)
+
+### Windows signature script
+
+I created a Windows PowerShell signature script on `srv-dc01`.
+
+Script location:
+
+`C:\Scripts\signature.ps1`
+
+The script prints my chosen portfolio name, email placeholder, timestamp, hostname and IP address.
+
+I allowed the script to run in the current PowerShell session with:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+The command `Set-ExecutionPolicy` changes PowerShell script execution rules.
+
+The option `-Scope Process` means the change only applies to the current PowerShell window.
+
+The option `-ExecutionPolicy Bypass` allows the script to run for this session.
+
+I tested the script with:
+
+```powershell
+C:\Scripts\signature.ps1
+```
+
+![Screenshot 15 - Windows signature script](screenshots/screenshot-15.png)
+
+### Installing Active Directory Domain Services and DNS
+
+I installed the following server roles on `srv-dc01`:
+
+* Active Directory Domain Services
+* DNS Server
+
+Active Directory Domain Services, AD DS, is used to manage domain users, computers, groups, organizational units and authentication.
+
+DNS Server is needed because Active Directory depends on DNS to locate domain controllers and domain services.
+
+The roles were installed through Server Manager using the Add Roles and Features Wizard.
+
+![Screenshot 16 - AD DS and DNS roles selected](screenshots/screenshot-16.png)
+
+After the roles were installed, Server Manager showed that additional configuration was required. I then promoted the server to a domain controller.
+
+### Domain controller promotion
+
+I promoted `srv-dc01` to a domain controller and created a new Active Directory forest.
+
+Root domain name:
+
+`bjorklunda.local`
+
+The server was configured as:
+
+* Domain controller
+* DNS server
+* Global Catalog server
+
+The prerequisites check passed successfully before installation.
+
+![Screenshot 17 - AD DS prerequisites passed](screenshots/screenshot-17.png)
+
+After the promotion, the server restarted. I logged in as the domain administrator account.
+
+I verified the domain controller promotion with:
+
+```powershell
+hostname
+whoami
+ipconfig
+```
+
+The command `hostname` confirmed that the server name was `srv-dc01`.
+
+The command `whoami` confirmed that I was logged in as:
+
+`bjorklunda\administrator`
+
+The command `ipconfig` confirmed that the server still had the IP address `192.168.80.12`.
+
+![Screenshot 18 - Domain controller verification](screenshots/screenshot-18.png)
+
+### Active Directory verification
+
+I opened Active Directory Users and Computers from Server Manager.
+
+This confirmed that the domain `bjorklunda.local` exists and that the server is functioning as a domain controller.
+
+Active Directory Users and Computers is used to manage domain objects such as users, groups, computers and organizational units.
+
+![Screenshot 19 - Active Directory Users and Computers](screenshots/screenshot-19.png)
+
+### Communication between Linux and Windows servers
+
+I tested network communication between `srv-linux01` and `srv-dc01`.
+
+From `srv-linux01`, I tested connectivity to `srv-dc01` with:
+
+```bash
+~/signature.sh
+ping -c 4 192.168.80.12
+```
+
+The command `ping -c 4 192.168.80.12` sends four ICMP packets from the Linux server to the Windows domain controller.
+
+The output showed `0% packet loss`, which means `srv-linux01` can reach `srv-dc01`.
+
+![Screenshot 13 - Linux to Windows ping](screenshots/screenshot-13.png)
+
+From `srv-dc01`, I tested connectivity to `srv-linux01` with:
+
+```powershell
+C:\Scripts\signature.ps1
+ping 192.168.80.10
+```
+
+The command `ping 192.168.80.10` sends ICMP packets from the Windows domain controller to the Linux server.
+
+The output showed successful replies, which means `srv-dc01` can reach `srv-linux01`.
+
+![Screenshot 14 - Windows to Linux ping](screenshots/screenshot-14.png)
+
+The successful ping tests confirm that both servers are on the same VMware NAT network and can communicate with each other.
+
+
 ## Part 5 — Account management with scripts
 
 ## Part 6 — Shared folders and permissions
