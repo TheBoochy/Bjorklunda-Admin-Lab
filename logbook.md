@@ -705,6 +705,133 @@ Each test user was added to the matching department group:
 
 This means permissions can later be assigned to the groups instead of directly to the users. For example, if the IT department needs access to a folder, the folder permission can be assigned to `GG_IT_Users`.
 
+### RHEL IdM server installation
+
+I installed the second RHEL server for the lab environment:
+
+`srv-idm01.bjorklunda.local`
+
+This server will later be used as the RHEL Identity Management, IdM, server. RHEL IdM is used to centrally manage Linux users, groups, authentication and access control.
+
+The VMware virtual machine was configured with the following settings:
+
+| Setting          | Value                         |
+| ---------------- | ----------------------------- |
+| VM name          | `srv-idm01`                   |
+| Operating system | Red Hat Enterprise Linux 10.1 |
+| Memory           | 4 GB                          |
+| Processors       | 2                             |
+| Disk             | 60 GB                         |
+| Network mode     | NAT                           |
+
+![srv-idm01 VM settings](screenshots/screenshot-23-srv-idm01-vm-settings.png)
+
+### srv-idm01 manual partitioning
+
+During the installation, I used manual partitioning for `srv-idm01`.
+
+The partition layout was based on the plan from Part 2, but I also added `/boot/efi` because the VM uses UEFI boot.
+
+Final partition layout:
+
+| Mount point |    Size | Filesystem           | Purpose                                                  |
+| ----------- | ------: | -------------------- | -------------------------------------------------------- |
+| `/boot/efi` | 600 MiB | EFI System Partition | Stores UEFI boot files                                   |
+| `/boot`     |   1 GiB | XFS                  | Stores kernel and boot files                             |
+| `/`         |  35 GiB | XFS                  | Stores the operating system, services, packages and logs |
+| `/home`     |  15 GiB | XFS                  | Stores user home directories and administrator files     |
+| `swap`      |   4 GiB | swap                 | Provides extra virtual memory if RAM becomes pressured   |
+
+The root partition `/` was given more space than on `srv-linux01` because the IdM server will later run identity-related services and needs more room for packages, logs and service data.
+
+![srv-idm01 manual partitioning](screenshots/screenshot-24-srv-idm01-partitioning.png)
+
+### srv-idm01 network and hostname configuration
+
+I configured `srv-idm01` with a static IP address during installation.
+
+Network configuration:
+
+| Setting           | Value                        |
+| ----------------- | ---------------------------- |
+| Hostname          | `srv-idm01.bjorklunda.local` |
+| IP address        | `192.168.80.11/24`           |
+| Default gateway   | `192.168.80.2`               |
+| DNS server        | `192.168.80.2`               |
+| Network interface | `ens160`                     |
+
+The server was placed on the same VMware NAT network as `srv-linux01` and `srv-dc01`.
+
+![srv-idm01 network and hostname](screenshots/screenshot-25-srv-idm01-network-hostname.png)
+
+### srv-idm01 installation verification
+
+After the installation, I logged in as the user:
+
+`vulkan`
+
+I verified the installation with these commands:
+
+```bash
+hostnamectl
+ip addr show ens160
+cat /etc/os-release
+df -h
+```
+
+The command `hostnamectl` shows the configured hostname and system information.
+
+The command `ip addr show ens160` shows the IP address configured on the network interface.
+
+The command `cat /etc/os-release` shows the installed operating system version.
+
+The command `df -h` shows mounted filesystems and disk usage in a human-readable format.
+
+The verification confirmed that:
+
+* `srv-idm01.bjorklunda.local` was configured as hostname
+* `192.168.80.11/24` was configured as IP address
+* Red Hat Enterprise Linux 10.1 was installed
+* the manual partitions were mounted correctly
+
+![srv-idm01 installation verification](screenshots/screenshot-26-srv-idm01-install-verification.png)
+
+### srv-idm01 signature script
+
+I copied the Linux signature script to `srv-idm01` and made it executable.
+
+Command used from the Windows host:
+
+```powershell
+scp scripts/signature.sh vulkan@192.168.80.11:~/signature.sh
+```
+
+The command `scp` securely copies the signature script from my local repository to the home directory of the user `vulkan` on `srv-idm01`.
+
+On `srv-idm01`, I made the script executable with:
+
+```bash
+chmod +x ~/signature.sh
+```
+
+The command `chmod +x` gives the script permission to run as a program.
+
+I tested the script with:
+
+```bash
+~/signature.sh
+```
+
+The script printed the portfolio name, email placeholder, timestamp, hostname and IP address.
+
+![srv-idm01 signature script](screenshots/screenshot-27-srv-idm01-signature-script.png)
+
+### srv-idm01 status
+
+At this point, `srv-idm01` is installed and reachable on the lab network.
+
+The next step will be to install and configure RHEL Identity Management on `srv-idm01`, verify that the IdM services are active, create IdM groups, and later connect `srv-linux01` to the IdM server.
+
 
 ## Part 5 — Account management with scripts
 
