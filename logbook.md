@@ -32,10 +32,12 @@ I chose to use the repository name `Bjorklunda-Admin-Lab` because this is a volu
 ### 2026-06-20
 
 **Worked on:**
-RHEL Identity Management installation and verification on `srv-idm01`.
+RHEL Identity Management installation, verification and IdM account automation on `srv-idm01`.
 
 **What I did:**
 I configured `srv-idm01` as a RHEL Identity Management server with integrated DNS. I installed the required IdM packages from a local RHEL ISO repository because the server was not registered with Red Hat Subscription Manager. After installation, I verified IdM services, Kerberos authentication, IPA commands, DNS forward and reverse lookups, and firewall services.
+
+I also added Bash scripts for IdM account management. The scripts create Linux IdM users, IdM groups and group memberships, and then verify the result with IPA commands.
 
 **Problems and solutions:**
 The first problem was that `dnf` could not install packages because no Red Hat repositories were available. I solved this by using the mounted RHEL ISO as a local package repository for BaseOS and AppStream.
@@ -44,8 +46,16 @@ The second issue was that `ipactl status` required root permissions. I solved th
 
 The firewall initially only showed `cockpit`, `dhcpv6-client`, and `ssh`. I added the required IdM-related services permanently and reloaded the firewall.
 
+During the IdM scripting part, I first tried to run Linux commands such as `chmod`, `kinit` and the Bash scripts directly in Windows PowerShell. This did not work because those commands must be run inside the Linux server. I solved this by using `scp` from Windows to copy the scripts to `srv-idm01`, then using `ssh` to connect to the server and run the Linux commands there.
+
+The first script versions also failed because the IdM group names used symbols that were rejected by the `ipa group-add` command. I solved this by changing the IdM group and user names to simple lowercase alphanumeric names.
+
+Another problem was that the Bash variable name `GROUPS` conflicted with Bash's built-in `GROUPS` variable. That built-in variable contains Linux group IDs for the current user, which caused the verification script to try to check groups such as `1000` and `10`. I solved this by renaming the script variable to `IDM_GROUPS`.
+
 **Decisions I made:**
 I used integrated DNS on the IdM server because IdM depends heavily on correct DNS for Kerberos, host records and service discovery. I also kept the server inside the VMware NAT lab network to keep the environment isolated.
+
+For the IdM script usernames and group names, I chose simple lowercase alphanumeric names to avoid naming problems in IdM and make the scripts reliable.
 
 **Sources I used:**
 
@@ -1364,11 +1374,132 @@ After that, I created scripts in the repository to document how the same structu
 
 This is useful for the portfolio because the scripts show the intended automation logic even if the first setup was done manually.
 
+### Bash script for IdM users and groups
+
+I also created Bash scripts for account management in RHEL Identity Management.
+
+Script files:
+
+* `scripts/create_idm_users_groups.sh`
+* `scripts/verify_idm_users_groups.sh`
+
+The purpose of these scripts is to show how Linux user and group management can be automated in IdM instead of creating every account manually.
+
+The create script was copied from the Windows host to `srv-idm01` with `scp`.
+
+Commands used from Windows PowerShell:
+
+```powershell
+scp scripts/create_idm_users_groups.sh vulkan@192.168.80.11:~/create_idm_users_groups.sh
+scp scripts/verify_idm_users_groups.sh vulkan@192.168.80.11:~/verify_idm_users_groups.sh
+```
+
+The command `scp` securely copies files from the Windows host to the Linux IdM server over SSH.
+
+After copying the scripts, I connected to `srv-idm01` using SSH:
+
+```powershell
+ssh vulkan@192.168.80.11
+```
+
+The command `ssh` opens a secure remote terminal session to the Linux server.
+
+On `srv-idm01`, I made the scripts executable:
+
+```bash
+chmod +x ~/create_idm_users_groups.sh ~/verify_idm_users_groups.sh
+```
+
+The command `chmod +x` gives the scripts permission to run as programs.
+
+Before running the IdM commands, I requested a Kerberos ticket:
+
+```bash
+kinit admin
+```
+
+The command `kinit admin` authenticates as the IdM administrator and creates a Kerberos ticket. The `ipa` commands need this ticket before they can create or manage IdM users and groups.
+
+### IdM create script
+
+The create script was run with:
+
+```bash
+~/create_idm_users_groups.sh
+```
+
+The script checks that a Kerberos ticket exists, creates IdM groups, creates IdM users and adds the users to the correct groups.
+
+The final working IdM groups are:
+
+| Group name | Purpose |
+| ---------- | ------- |
+| `linuxitusers` | Linux group for IT users |
+| `linuxhrusers` | Linux group for HR users |
+| `linuxfinanceusers` | Linux group for Finance users |
+| `linuxeducationusers` | Linux group for Education users |
+
+The final working IdM users are:
+
+| User login | Group |
+| ---------- | ----- |
+| `linuxit01` | `linuxitusers` |
+| `linuxhr01` | `linuxhrusers` |
+| `linuxfinance01` | `linuxfinanceusers` |
+| `linuxeducation01` | `linuxeducationusers` |
+
+The script uses `ipa group-add` to create groups, `ipa user-add` to create users, and `ipa group-add-member` to connect users to groups.
+
+![IdM create users and groups script](screenshots/screenshot-38-idm-script-create-users-groups.png)
+
+### IdM verification script
+
+The verification script was run with:
+
+```bash
+~/verify_idm_users_groups.sh
+```
+
+The script checks that a Kerberos ticket exists and then verifies users, groups and group memberships with IPA commands.
+
+The script uses:
+
+```bash
+ipa user-find linux
+ipa group-find linux
+ipa group-show groupname
+```
+
+The command `ipa user-find linux` searches for the Linux IdM users.
+
+The command `ipa group-find linux` searches for the Linux IdM groups.
+
+The command `ipa group-show groupname` shows details about a group, including member users.
+
+The verification confirmed that four users and four groups were created, and that each user was a member of the correct group.
+
+![IdM verify users and groups script](screenshots/screenshot-39-idm-script-verify-users-groups.png)
+
+### IdM scripting troubleshooting
+
+There were three main issues during this part.
+
+The first issue was that Linux commands were accidentally run inside Windows PowerShell. Commands such as `chmod`, `kinit` and `~/create_idm_users_groups.sh` must be run on the Linux server, not on Windows. The correct workflow is to use `scp` from Windows to copy the scripts, then use `ssh` to connect to `srv-idm01`, and then run the Linux commands inside the SSH session.
+
+The second issue was that earlier group names with symbols were rejected by IdM. To solve this, I changed the group and user names to simple lowercase alphanumeric names.
+
+The third issue was that the Bash variable name `GROUPS` conflicted with Bash's built-in `GROUPS` variable. Bash uses `GROUPS` to store the current user's Linux group IDs. This caused the script to try to check group IDs such as `1000` and `10` instead of the intended IdM groups. I solved this by renaming the variable to `IDM_GROUPS`.
+
+This made the script work correctly.
+
+
 ### Part 5 status
 
 The Active Directory script preparation is completed.
 
-The IdM Bash script part is still pending. Since `srv-idm01` has now been installed and verified as a RHEL Identity Management server, the next step is to add a Bash script for IdM user and group creation and then verify the result with IPA commands.
+The IdM Bash script part is also completed. The scripts create IdM users, create IdM groups, add the users to the correct groups and verify the result with IPA commands.
+
+Part 5 now shows both Windows account automation with PowerShell and Linux IdM account automation with Bash.
 
 
 ## Part 6 — Shared folders and permissions
