@@ -1,6 +1,6 @@
 # Björklunda Admin Lab
 
-**Name:** Robert
+**Name:** Vulkan
 **GitHub:** TheBoochy
 **Project:** Voluntary portfolio lab based on Björklunda kommun IT technician case
 **Focus:** RHEL, Windows Server, Active Directory, Identity Management, scripting, documentation and administration
@@ -26,6 +26,32 @@ I chose to use the repository name `Bjorklunda-Admin-Lab` because this is a volu
 **Sources I used:**
 
 * School assignment PDF: Case IT-tekniker på Björklunda kommun
+
+---
+
+### 2026-06-20
+
+**Worked on:**
+RHEL Identity Management installation and verification on `srv-idm01`.
+
+**What I did:**
+I configured `srv-idm01` as a RHEL Identity Management server with integrated DNS. I installed the required IdM packages from a local RHEL ISO repository because the server was not registered with Red Hat Subscription Manager. After installation, I verified IdM services, Kerberos authentication, IPA commands, DNS forward and reverse lookups, and firewall services.
+
+**Problems and solutions:**
+The first problem was that `dnf` could not install packages because no Red Hat repositories were available. I solved this by using the mounted RHEL ISO as a local package repository for BaseOS and AppStream.
+
+The second issue was that `ipactl status` required root permissions. I solved this by running the command with `sudo`.
+
+The firewall initially only showed `cockpit`, `dhcpv6-client`, and `ssh`. I added the required IdM-related services permanently and reloaded the firewall.
+
+**Decisions I made:**
+I used integrated DNS on the IdM server because IdM depends heavily on correct DNS for Kerberos, host records and service discovery. I also kept the server inside the VMware NAT lab network to keep the environment isolated.
+
+**Sources I used:**
+
+* Red Hat documentation about RHEL Identity Management
+* Red Hat documentation about firewalld
+* RHEL installation ISO packages
 
 ---
 
@@ -826,11 +852,359 @@ The script printed the portfolio name, email placeholder, timestamp, hostname an
 
 ![srv-idm01 signature script](screenshots/screenshot-27-srv-idm01-signature-script.png)
 
+### Pre-IdM hostname, hosts file and time checks
+
+Before installing RHEL Identity Management, I checked that the hostname, local hosts file and time synchronization were correct.
+
+Commands used:
+
+```bash
+cat /etc/hosts
+hostname -f
+timedatectl
+```
+
+The command `cat /etc/hosts` shows local hostname mappings stored on the server. This was used to confirm that `srv-idm01.bjorklunda.local` was mapped to `192.168.80.11`.
+
+The command `hostname -f` shows the full qualified domain name, FQDN, of the server. This was used to confirm that the server name was correctly set to `srv-idm01.bjorklunda.local`.
+
+The command `timedatectl` shows the system time, time zone and time synchronization status. This is important because Kerberos authentication depends on correct time synchronization.
+
+The checks confirmed that:
+
+* `/etc/hosts` included `192.168.80.11 srv-idm01.bjorklunda.local srv-idm01`
+* the full hostname was `srv-idm01.bjorklunda.local`
+* the time zone was `Europe/Stockholm`
+* system clock synchronization was enabled
+* NTP service was active
+
+![srv-idm01 pre-IdM checks](screenshots/screenshot-28-srv-idm01-pre-idm-checks.png)
+
+### Local RHEL ISO repository and IdM package installation
+
+When I tried to install the IdM packages, the server could not use online Red Hat repositories because it was not registered with Red Hat Subscription Manager.
+
+The problem message was that no repositories were available.
+
+To solve this, I used the mounted RHEL installation ISO as a local package repository.
+
+The ISO was mounted at:
+
+```text
+/run/media/vulkan/RHEL-10-1-BaseOS-x86_64
+```
+
+I created a local repository file:
+
+```text
+/etc/yum.repos.d/rhel-local.repo
+```
+
+The repository file made both BaseOS and AppStream packages available from the installation ISO.
+
+The repository configuration used:
+
+```ini
+[BaseOS]
+name=RHEL 10 Local BaseOS
+baseurl=file:///run/media/vulkan/RHEL-10-1-BaseOS-x86_64/BaseOS
+enabled=1
+gpgcheck=0
+
+[AppStream]
+name=RHEL 10 Local AppStream
+baseurl=file:///run/media/vulkan/RHEL-10-1-BaseOS-x86_64/AppStream
+enabled=1
+gpgcheck=0
+```
+
+Commands used:
+
+```bash
+sudo dnf clean all
+sudo dnf repolist
+sudo dnf install -y ipa-server ipa-server-dns
+which ipa-server-install
+```
+
+The command `sudo dnf clean all` clears old repository metadata.
+
+The command `sudo dnf repolist` shows enabled package repositories.
+
+The command `sudo dnf install -y ipa-server ipa-server-dns` installs the RHEL Identity Management server packages and the integrated DNS packages.
+
+The command `which ipa-server-install` confirms that the IdM installer command exists on the system.
+
+![srv-idm01 local repo and IdM package installation](screenshots/screenshot-29-srv-idm01-local-repo-idm-packages.png)
+
+### RHEL Identity Management installation
+
+I installed RHEL Identity Management on:
+
+`srv-idm01.bjorklunda.local`
+
+The installation command was:
+
+```bash
+sudo ipa-server-install --setup-dns
+```
+
+The command `ipa-server-install` installs and configures the RHEL Identity Management server.
+
+The option `--setup-dns` enables integrated DNS on the IdM server. This is important because IdM depends on DNS for Kerberos, host records, service discovery and reliable authentication.
+
+Installation values used:
+
+| Setting        | Value                        |
+| -------------- | ---------------------------- |
+| Hostname       | `srv-idm01.bjorklunda.local` |
+| IP address     | `192.168.80.11`              |
+| Domain name    | `bjorklunda.local`           |
+| Kerberos realm | `BJORKLUNDA.LOCAL`           |
+| NetBIOS name   | `BJORKLUNDA`                 |
+| Integrated DNS | Enabled                      |
+| DNS forwarder  | `192.168.80.2`               |
+| Reverse zone   | `80.168.192.in-addr.arpa`    |
+
+The installer configured several important components:
+
+* Directory Service
+* Kerberos KDC
+* Kerberos admin service
+* BIND DNS
+* Apache HTTP service for the IdM web interface
+* Certificate services
+* IPA client configuration
+
+The installer completed successfully and showed:
+
+```text
+Setup complete
+The ipa-server-install command was successful
+```
+
+**Screenshot note:** The IdM installation success screenshot should be added later if you save it as `screenshots/screenshot-30-srv-idm01-idm-install-success.png`.
+
+### IdM service verification
+
+I verified the IdM service status with:
+
+```bash
+sudo ipactl status
+```
+
+The command `ipactl status` checks the main IdM services.
+
+The command had to be run with `sudo` because `ipactl` requires root permissions.
+
+The output showed that the following IdM services were running:
+
+* Directory Service
+* krb5kdc
+* kadmin
+* named
+* httpd
+* ipa-custodia
+* pki-tomcatd
+* ipa-otpd
+* ipa-dnskeysyncd
+
+This confirms that the IdM services started correctly.
+
+![srv-idm01 IdM service status](screenshots/screenshot-31-srv-idm01-ipactl-status.png)
+
+### Kerberos verification
+
+I requested a Kerberos ticket for the IdM administrator account with:
+
+```bash
+kinit admin
+```
+
+The command `kinit admin` authenticates as the IdM admin user and requests a Kerberos ticket.
+
+Kerberos tickets are used so authenticated users can run IdM commands without typing the password for every command.
+
+I checked the active ticket with:
+
+```bash
+klist
+```
+
+The command `klist` shows the current Kerberos ticket cache.
+
+The output showed:
+
+```text
+Default principal: admin@BJORKLUNDA.LOCAL
+```
+
+This confirms that Kerberos authentication works for the IdM admin account.
+
+![srv-idm01 Kerberos admin ticket](screenshots/screenshot-31-srv-idm01-kinit-admin.png)
+
+### IPA command verification
+
+I verified that IPA commands worked with the Kerberos admin ticket.
+
+Commands used:
+
+```bash
+ipa user-find
+ipa group-find
+ipa host-find
+```
+
+The command `ipa user-find` lists users stored in IdM.
+
+The command `ipa group-find` lists groups stored in IdM.
+
+The command `ipa host-find` lists hosts registered in IdM.
+
+The results confirmed that:
+
+* the built-in `admin` user exists
+* default IdM groups exist, including `admins`, `editors`, `ipausers` and `trust admins`
+* the host `srv-idm01.bjorklunda.local` is registered in IdM
+
+This confirms that the IdM database and IPA command-line tools are working.
+
+![srv-idm01 IPA command verification](screenshots/screenshot-32-srv-idm01-ipa-commands.png)
+
+### IdM DNS verification
+
+I verified forward and reverse DNS through the IdM DNS service.
+
+Commands used:
+
+```bash
+dig srv-idm01.bjorklunda.local
+dig -x 192.168.80.11
+```
+
+The command `dig srv-idm01.bjorklunda.local` checks forward DNS. It verifies that the hostname resolves to an IP address.
+
+The command `dig -x 192.168.80.11` checks reverse DNS. It verifies that the IP address resolves back to a hostname.
+
+The forward lookup returned:
+
+```text
+srv-idm01.bjorklunda.local. 1200 IN A 192.168.80.11
+```
+
+The reverse lookup returned:
+
+```text
+11.80.168.192.in-addr.arpa. 86400 IN PTR srv-idm01.bjorklunda.local.
+```
+
+The DNS server used was:
+
+```text
+127.0.0.1#53
+```
+
+This means the lookup was answered by the local DNS service running on `srv-idm01`.
+
+The output also showed a warning that `.local` is reserved for multicast DNS. For this isolated lab environment, the DNS lookups still worked correctly.
+
+**Screenshot note:** The DNS verification screenshot should be added later if you save it as `screenshots/screenshot-33-srv-idm01-dns-checks.png`.
+
+### Firewall verification and IdM services
+
+I checked the firewall with:
+
+```bash
+sudo firewall-cmd --list-all
+```
+
+The command `firewall-cmd --list-all` shows the active firewall zone, allowed services, open ports and network interfaces.
+
+Before opening IdM services, the firewall only showed:
+
+```text
+cockpit dhcpv6-client ssh
+```
+
+This meant that basic administration services were allowed, but IdM-related services were not shown in the firewall configuration.
+
+![srv-idm01 firewall before IdM services](screenshots/screenshot-34-srv-idm01-firewall-check.png)
+
+I added the required IdM-related firewall services with:
+
+```bash
+sudo firewall-cmd --permanent --add-service=freeipa-ldap
+sudo firewall-cmd --permanent --add-service=freeipa-ldaps
+sudo firewall-cmd --permanent --add-service=dns
+sudo firewall-cmd --permanent --add-service=ntp
+sudo firewall-cmd --reload
+```
+
+The option `--permanent` saves the firewall change so it remains after reboot.
+
+The service `freeipa-ldap` allows core IdM and LDAP traffic.
+
+The service `freeipa-ldaps` allows secure LDAP and related IdM traffic.
+
+The service `dns` allows DNS traffic.
+
+The service `ntp` allows time synchronization traffic.
+
+The command `sudo firewall-cmd --reload` reloads the firewall so the permanent changes become active.
+
+After reloading the firewall, I checked the firewall again:
+
+```bash
+sudo firewall-cmd --list-all
+```
+
+The services line showed:
+
+```text
+cockpit dhcpv6-client dns freeipa-ldap freeipa-ldaps ntp ssh
+```
+
+This confirms that the firewall allows the required IdM, DNS and time synchronization services.
+
+![srv-idm01 firewall after IdM services](screenshots/screenshot-35-srv-idm01-firewall-idm-services.png)
+
+### Final IdM verification
+
+I performed a final verification with:
+
+```bash
+hostnamectl
+ip addr show ens160
+sudo ipactl status
+sudo firewall-cmd --list-all
+```
+
+The command `hostnamectl` confirms the server hostname and operating system information.
+
+The command `ip addr show ens160` confirms the IP address on the network interface.
+
+The command `sudo ipactl status` confirms that IdM services are running.
+
+The command `sudo firewall-cmd --list-all` confirms that the firewall has the required services open.
+
+The final verification confirmed:
+
+* hostname: `srv-idm01.bjorklunda.local`
+* operating system: Red Hat Enterprise Linux 10.1
+* IP address: `192.168.80.11/24`
+* interface: `ens160`
+* IdM services: running
+* firewall services: `cockpit dhcpv6-client dns freeipa-ldap freeipa-ldaps ntp ssh`
+
+![srv-idm01 final IdM verification](screenshots/screenshot-36-srv-idm01-final-idm-verification.png)
+
 ### srv-idm01 status
 
-At this point, `srv-idm01` is installed and reachable on the lab network.
+At this point, `srv-idm01` is installed, configured and verified as a RHEL Identity Management server.
 
-The next step will be to install and configure RHEL Identity Management on `srv-idm01`, verify that the IdM services are active, create IdM groups, and later connect `srv-linux01` to the IdM server.
+The server now provides Linux identity management services for the lab environment, including Kerberos, LDAP, DNS, certificates and centralized Linux authentication features.
+
+The next step will be to create IdM users and groups with a Bash script, verify them with IPA commands, and later connect `srv-linux01` to the IdM server.
 
 
 ## Part 5 — Account management with scripts
@@ -994,7 +1368,7 @@ This is useful for the portfolio because the scripts show the intended automatio
 
 The Active Directory script preparation is completed.
 
-The IdM Bash script part is still pending because `srv-idm01` has not been fully configured yet in this lab workflow. When the IdM server is ready, the Bash account creation script and IdM user verification can be added.
+The IdM Bash script part is still pending. Since `srv-idm01` has now been installed and verified as a RHEL Identity Management server, the next step is to add a Bash script for IdM user and group creation and then verify the result with IPA commands.
 
 
 ## Part 6 — Shared folders and permissions
