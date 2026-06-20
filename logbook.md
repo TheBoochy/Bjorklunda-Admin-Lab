@@ -32,12 +32,14 @@ I chose to use the repository name `Bjorklunda-Admin-Lab` because this is a volu
 ### 2026-06-20
 
 **Worked on:**
-RHEL Identity Management installation, verification and IdM account automation on `srv-idm01`.
+RHEL Identity Management installation, verification and IdM account automation on `srv-idm01`, and Windows Server shared folders and permissions on `srv-dc01`.
 
 **What I did:**
 I configured `srv-idm01` as a RHEL Identity Management server with integrated DNS. I installed the required IdM packages from a local RHEL ISO repository because the server was not registered with Red Hat Subscription Manager. After installation, I verified IdM services, Kerberos authentication, IPA commands, DNS forward and reverse lookups, and firewall services.
 
 I also added Bash scripts for IdM account management. The scripts create Linux IdM users, IdM groups and group memberships, and then verify the result with IPA commands.
+
+After completing the IdM scripting work, I continued with shared folders on `srv-dc01`. I created department folders for IT, HR, Finance and Education, shared them with SMB, checked the share list, checked share access, applied NTFS permissions to the matching Active Directory groups and verified that the shares were reachable through the network path `\\srv-dc01`.
 
 **Problems and solutions:**
 The first problem was that `dnf` could not install packages because no Red Hat repositories were available. I solved this by using the mounted RHEL ISO as a local package repository for BaseOS and AppStream.
@@ -52,16 +54,22 @@ The first script versions also failed because the IdM group names used symbols t
 
 Another problem was that the Bash variable name `GROUPS` conflicted with Bash's built-in `GROUPS` variable. That built-in variable contains Linux group IDs for the current user, which caused the verification script to try to check groups such as `1000` and `10`. I solved this by renaming the script variable to `IDM_GROUPS`.
 
+During the Windows share configuration, pasted PowerShell commands were corrupted inside the VM console. For example, dashes and quotes were converted into incorrect characters. I solved this by creating the shares through Server Manager and by typing short verification commands manually in PowerShell instead of pasting long commands.
+
 **Decisions I made:**
 I used integrated DNS on the IdM server because IdM depends heavily on correct DNS for Kerberos, host records and service discovery. I also kept the server inside the VMware NAT lab network to keep the environment isolated.
 
 For the IdM script usernames and group names, I chose simple lowercase alphanumeric names to avoid naming problems in IdM and make the scripts reliable.
+
+For the shared folders, I used separate department shares and group-based permissions. This makes access easier to manage because permissions can be assigned to groups instead of directly to individual users.
 
 **Sources I used:**
 
 * Red Hat documentation about RHEL Identity Management
 * Red Hat documentation about firewalld
 * RHEL installation ISO packages
+* Microsoft documentation about SMB shares and NTFS permissions
+* Microsoft documentation about Active Directory security groups
 
 ---
 
@@ -1503,6 +1511,217 @@ Part 5 now shows both Windows account automation with PowerShell and Linux IdM a
 
 
 ## Part 6 — Shared folders and permissions
+
+In this part I created shared department folders on the Windows Server domain controller `srv-dc01`.
+
+The goal of this part was to create central folders for different departments and control access with Active Directory security groups.
+
+In a real environment, shared folders are useful because users can store department files in a central location instead of keeping everything on individual computers. Permissions should be assigned to groups instead of individual users, because group-based permissions are easier to manage, review and change later.
+
+### Department folder structure
+
+I created a main folder on `srv-dc01`:
+
+`C:\Shares`
+
+Inside this folder, I created one folder for each department:
+
+| Folder | Purpose |
+| ------ | ------- |
+| `C:\Shares\IT` | Shared folder for IT department files |
+| `C:\Shares\HR` | Shared folder for HR department files |
+| `C:\Shares\Finance` | Shared folder for Finance department files |
+| `C:\Shares\Education` | Shared folder for Education department files |
+
+I verified the folder structure with:
+
+```powershell
+Get-ChildItem C:\Shares
+```
+
+The command `Get-ChildItem C:\Shares` lists the folders inside `C:\Shares`.
+
+The output showed the four department folders:
+
+* `Education`
+* `Finance`
+* `HR`
+* `IT`
+
+This confirmed that the local folder structure was created correctly.
+
+![srv-dc01 share folders created](screenshots/screenshot-41-srv-dc01-share-folders-created.png)
+
+### SMB shares
+
+After creating the folders, I shared them through Server Manager under:
+
+`File and Storage Services > Shares`
+
+I used the New Share Wizard and selected:
+
+`SMB Share - Quick`
+
+SMB, Server Message Block, is the Windows protocol used for network file sharing. An SMB share makes a local folder available through a network path such as `\\srv-dc01\IT`.
+
+I created the following SMB shares:
+
+| Share name | Local path | Network path |
+| ---------- | ---------- | ------------ |
+| `IT` | `C:\Shares\IT` | `\\srv-dc01\IT` |
+| `HR` | `C:\Shares\HR` | `\\srv-dc01\HR` |
+| `Finance` | `C:\Shares\Finance` | `\\srv-dc01\Finance` |
+| `Education` | `C:\Shares\Education` | `\\srv-dc01\Education` |
+
+Server Manager showed six shares in total. The two default domain controller shares were:
+
+* `NETLOGON`
+* `SYSVOL`
+
+The four new department shares were:
+
+* `IT`
+* `HR`
+* `Finance`
+* `Education`
+
+I did not change `NETLOGON` or `SYSVOL` because those shares are used by Active Directory.
+
+![srv-dc01 SMB shares created](screenshots/screenshot-42-srv-dc01-smb-shares-created.png)
+
+### SMB share verification
+
+I verified the SMB shares in PowerShell with:
+
+```powershell
+Get-SmbShare
+```
+
+The command `Get-SmbShare` lists SMB shares on the server.
+
+The output showed the new department shares:
+
+* `Education` with path `C:\Shares\Education`
+* `Finance` with path `C:\Shares\Finance`
+* `HR` with path `C:\Shares\HR`
+* `IT` with path `C:\Shares\IT`
+
+It also showed the default administrative and domain shares, such as `ADMIN$`, `C$`, `IPC$`, `NETLOGON` and `SYSVOL`.
+
+This confirmed that the department folders were shared over the network.
+
+![srv-dc01 SMB share verification](screenshots/screenshot-43-srv-dc01-smb-share-verification.png)
+
+### SMB share access check
+
+I checked share-level access with:
+
+```powershell
+Get-SmbShareAccess IT
+Get-SmbShareAccess HR
+Get-SmbShareAccess Finance
+Get-SmbShareAccess Education
+```
+
+The command `Get-SmbShareAccess` shows share-level permissions for an SMB share.
+
+Share-level permissions control access at the network share layer. They are different from NTFS permissions, which control access on the folder itself.
+
+This check was used to document the share access configuration for the four department shares.
+
+![srv-dc01 SMB share access](screenshots/screenshot-44-srv-dc01-smb-share-access.png)
+
+### NTFS permissions
+
+After creating the SMB shares, I configured NTFS permissions on the folders.
+
+Windows file access has two permission layers:
+
+| Permission type | Meaning |
+| --------------- | ------- |
+| Share permission | Controls access through the network share |
+| NTFS permission | Controls access to the folder on the disk |
+
+A user must have access through both layers. The most restrictive permission applies.
+
+I assigned Modify permission to the matching department groups:
+
+| Folder | Active Directory group | Permission |
+| ------ | ---------------------- | ---------- |
+| `C:\Shares\IT` | `BJORKLUNDA\GG_IT_Users` | Modify |
+| `C:\Shares\HR` | `BJORKLUNDA\GG_HR_Users` | Modify |
+| `C:\Shares\Finance` | `BJORKLUNDA\GG_Finance_Users` | Modify |
+| `C:\Shares\Education` | `BJORKLUNDA\GG_Education_Users` | Modify |
+
+The Modify permission allows users to read, create, edit and delete normal files in their department folder.
+
+I kept administrator and system permissions so that administrators can still manage the folders.
+
+I verified NTFS permissions with:
+
+```powershell
+icacls C:\Shares\IT
+icacls C:\Shares\HR
+icacls C:\Shares\Finance
+icacls C:\Shares\Education
+```
+
+The command `icacls` shows NTFS permissions for files and folders.
+
+The output showed the matching department groups with:
+
+```text
+(OI)(CI)(M)
+```
+
+This means:
+
+| Code | Meaning |
+| ---- | ------- |
+| `OI` | Object inherit, files inside the folder inherit the permission |
+| `CI` | Container inherit, subfolders inherit the permission |
+| `M` | Modify permission |
+
+This confirmed that the department groups had Modify permissions on their matching folders.
+
+![srv-dc01 NTFS permissions verification](screenshots/screenshot-46-srv-dc01-ntfs-permissions-verification.png)
+
+### Network path verification
+
+I tested the network path by opening:
+
+`\\srv-dc01`
+
+The network view showed the shared folders:
+
+* `Education`
+* `Finance`
+* `HR`
+* `IT`
+* `NETLOGON`
+* `SYSVOL`
+
+This confirmed that the department shares were reachable through the server name and visible as network shares.
+
+![srv-dc01 network share path](screenshots/screenshot-47-srv-dc01-network-share-path.png)
+
+### Part 6 status
+
+The shared folders and permissions part is completed.
+
+The final result is:
+
+* four local department folders were created under `C:\Shares`
+* four SMB shares were created for the departments
+* SMB shares were verified with `Get-SmbShare`
+* share access was checked with `Get-SmbShareAccess`
+* NTFS permissions were applied to the matching Active Directory groups
+* NTFS permissions were verified with `icacls`
+* the network path `\\srv-dc01` showed the department shares
+
+This part demonstrates basic Windows Server file sharing, SMB shares, NTFS permissions and group-based access control.
+
+
 
 ## Part 7 — Printing system
 
