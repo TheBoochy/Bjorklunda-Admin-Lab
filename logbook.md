@@ -76,7 +76,7 @@ For the shared folders, I used separate department shares and group-based permis
 ### 2026-06-22
 
 **Worked on:**
-Windows Server printing system on `srv-dc01`, virtualization documentation, and laws and security documentation for the lab environment.
+Windows Server printing system on `srv-dc01`, virtualization documentation, laws and security documentation, advice and support documentation, and final environment reflection for the lab environment.
 
 **What I did:**
 I completed the printing system part by installing and documenting the Print Server role, using Print Management, creating a shared lab printer, troubleshooting the Microsoft Print to PDF sharing limitation, and verifying the final shared printer with PowerShell and the network path `\\srv-dc01`.
@@ -85,15 +85,27 @@ I also completed the virtualization documentation for the lab environment. The v
 
 After that, I completed the laws and security documentation. This part connects the technical lab setup to security principles such as least privilege, group-based access control, logging, patching, firewall rules, backups and GDPR-related responsibility for protecting personal data.
 
+I also created advice and support documentation in `docs/support_notes.md`. This document explains how an IT technician can handle user support cases, ask troubleshooting questions, prioritize issues, explain solutions clearly, give safe security advice and document support work.
+
+Finally, I created the environment reflection documentation in `docs/environment_reflection.md`. This document summarizes the whole lab environment, what worked well, what problems were solved, what I learned, how security was applied and what could be improved in the future.
+
 **Problems and solutions:**
 The first test printer used Microsoft Print to PDF, but that printer type did not support sharing. PowerShell returned an error when I tried to enable sharing, and Print Management confirmed that sharing was not supported for that printer type. I solved this by creating a new test printer with the `Generic / Text Only` driver and a local file-based printer port.
 
 For the security documentation, I used screenshots from existing lab components instead of adding unnecessary new services. Active Directory groups, NTFS permissions, Windows security logs, Windows Update and the IdM firewall were enough to show security thinking without making the lab more complicated than needed.
 
+For the advice and support part, I skipped the extra Print Management screenshot because the printer support example was already documented in Part 7. I kept the Part 10 evidence focused on the support notes file and Event Viewer System log.
+
+For the final reflection, I kept the section focused on the whole lab instead of adding new technical configuration. This made the final part a clear summary of the project rather than another configuration task.
+
 **Decisions I made:**
 I used a simulated test printer instead of a physical printer because the goal of this lab part was to demonstrate print server management, printer sharing, driver selection and verification. For virtualization, I kept the lab servers in VMware NAT networking because it keeps the environment isolated while still allowing the servers to communicate inside the lab network.
 
 For the security section, I focused on practical IT technician responsibilities: limiting access, documenting permissions, checking logs, keeping systems updated, using firewalls and planning for recovery. This connects the lab work to real administration and security requirements.
+
+For the support section, I focused on realistic helpdesk work: listening to users, identifying affected systems, checking basic facts, troubleshooting step by step, explaining solutions clearly and documenting the support case.
+
+For the environment reflection, I focused on connecting the completed technical parts into one complete portfolio story: Linux administration, Windows Server administration, identity management, permissions, printing, virtualization, security, support and documentation.
 
 **Sources I used:**
 
@@ -104,6 +116,8 @@ For the security section, I focused on practical IT technician responsibilities:
 * Red Hat documentation about firewalld
 * VMware documentation and the VMware user interface
 * General GDPR principles about protecting personal data with appropriate technical and organizational measures
+* General IT support and troubleshooting methodology
+* Own reflection based on the completed lab environment
 
 ---
 
@@ -2372,4 +2386,346 @@ This part demonstrates how the technical lab work connects to laws, security pri
 
 ## Part 10 — Advice and support
 
+In this part I documented how an IT technician should handle advice, user support and troubleshooting.
+
+The goal of this part is to show that IT administration is not only about configuring servers. A technician also needs to understand user problems, ask useful questions, explain solutions clearly, prioritize support cases and document what was done.
+
+This part connects to the earlier technical work in the lab, such as Active Directory users and groups, shared folders, NTFS permissions, printer sharing, Windows logs and Linux firewall configuration.
+
+### Support documentation file
+
+I created a support documentation file:
+
+`docs/support_notes.md`
+
+The purpose of this file is to describe a structured support method for common IT technician tasks.
+
+The document includes:
+
+* how to listen to the user
+* how to identify the affected system
+* how to check basic facts before making changes
+* how to troubleshoot step by step
+* how to explain the solution clearly
+* how to document the support case
+* how to prioritize support requests
+* example support cases
+* security advice for users
+* a simple support case documentation template
+
+
+### Basic support method
+
+The support method in the documentation follows a structured process.
+
+The first step is to listen to the user and understand what they were trying to do, what happened instead and when the problem started.
+
+The second step is to identify the affected system. This could be a user account, password, network drive, shared folder, printer, server, workstation or network connection.
+
+The third step is to check simple facts first. For example, the technician should check whether the user is logged in with the correct account, whether the network path is correct, whether the service is running and whether the user has the correct permissions.
+
+The fourth step is to troubleshoot one thing at a time. This makes it easier to understand what actually solved the problem.
+
+The final step is to explain the solution and document the case.
+
+### Prioritization
+
+The support notes also document how support cases can be prioritized.
+
+Priority should be based on:
+
+| Factor | Meaning |
+| ------ | ------- |
+| Impact | How many users or systems are affected |
+| Urgency | How quickly the issue needs to be fixed |
+| Security risk | Whether the issue could involve unauthorized access, malware or data loss |
+
+Examples of high-priority cases include many users being unable to log in, a file server being unavailable or a suspected account compromise.
+
+Examples of medium-priority cases include one user being unable to print or one user being unable to access a department folder.
+
+Examples of low-priority cases include general help with settings or non-urgent user questions.
+
+### Example support cases
+
+The support notes include several example cases that connect to the lab environment.
+
+#### User cannot access department folder
+
+This case connects to the shared folders and NTFS permissions from Part 6.
+
+The technician should check:
+
+* whether the user is logged in with the correct domain account
+* whether the network path is correct
+* whether the user is a member of the correct department group
+* whether NTFS permissions are correct
+* whether SMB share access is correct
+
+This shows how Active Directory groups and NTFS permissions can be used in real support work.
+
+#### User cannot print
+
+This case connects to the print server from Part 7.
+
+The technician should check:
+
+* whether the printer is shared from `srv-dc01`
+* whether the printer path is correct
+* whether the printer appears in Print Management
+* whether the print queue has problems
+* whether the user has permission to print
+
+This shows how print server administration can become part of normal user support.
+
+#### User forgot password
+
+This case connects to Active Directory account management from Part 4 and Part 5.
+
+The technician should verify the user's identity according to company policy before resetting the password. This is important because password resets can become a security risk if handled carelessly.
+
+#### Suspicious login or account misuse
+
+This case connects to the laws and security section from Part 9.
+
+The technician should treat suspicious account activity as a possible security incident. The first priority is to secure the account, check logs, reset the password if needed and escalate if the activity looks serious.
+
+### Event Viewer System log
+
+I also documented the Windows Event Viewer System log as support evidence.
+
+Event Viewer is a Windows tool used to view logs from the operating system, services, applications and security events.
+
+The System log records operating system and service events. It can help a technician investigate problems such as service failures, driver issues, update problems, warnings and system errors.
+
+This is useful in support work because not every issue is caused by the user. Sometimes the system logs can show what actually happened.
+
+![Event Viewer System log](screenshots/screenshot-73-part10-event-viewer-system-log.png)
+
+### Communication principles
+
+The support notes explain that an IT technician should communicate clearly and calmly.
+
+Good support communication should be:
+
+* clear
+* respectful
+* structured
+* honest
+* focused on solving the problem
+* adjusted to the user's technical level
+
+The technician should avoid blaming the user. Even if the user caused the issue, the goal is to fix the problem and reduce the chance that it happens again.
+
+### Security advice for users
+
+The support notes also include basic security advice for users.
+
+Users should be reminded to:
+
+* use strong passwords
+* avoid sharing passwords
+* lock the screen when leaving the computer
+* report suspicious emails or links
+* avoid storing sensitive files in the wrong place
+* use approved shared folders instead of personal storage
+* contact IT instead of trying unsafe fixes
+
+This connects support work to security awareness. A technician should not only fix problems, but also help users avoid unsafe behavior.
+
+### Support case documentation template
+
+The support notes include a simple template for documenting support cases.
+
+The template includes:
+
+| Field | Purpose |
+| ----- | ------- |
+| Date | When the support case happened |
+| User | Which user reported the issue |
+| Department | Which department was affected |
+| System affected | Which system or service had the problem |
+| Problem description | What the user reported |
+| Troubleshooting steps | What was checked |
+| Solution | What fixed the issue |
+| Result | Whether the issue was solved |
+| Follow-up needed | Whether more action is needed |
+
+This helps make support work traceable and easier to review later.
+
+### Part 10 screenshots
+
+| Screenshot | Description |
+| ---------- | ----------- |
+| `screenshot-72-part10-support-notes-file.png` | Support notes file created in VS Code |
+| `screenshot-73-part10-event-viewer-system-log.png` | Event Viewer System log used as support troubleshooting evidence |
+
+### Part 10 status
+
+The advice and support part is completed.
+
+The final result is:
+
+* `docs/support_notes.md` was created
+* a structured support method was documented
+* support prioritization was explained
+* example support cases were connected to the lab systems
+* user communication principles were documented
+* basic security advice for users was documented
+* a support case documentation template was included
+* Event Viewer System logs were documented as troubleshooting evidence
+
+This part demonstrates that an IT technician needs both technical skills and communication skills. The technician must be able to troubleshoot systems, support users, explain solutions and document work clearly.
+
 ## Part 11 — Environment reflection
+
+In this final part I created a reflection document for the Björklunda Admin Lab.
+
+The goal of this part was to summarize the whole lab environment and explain what was built, what worked well, which problems were solved, what I learned and what could be improved in the future.
+
+This part is important because an IT project should not only show configuration steps. It should also show understanding, reflection and the ability to explain why the work matters. Apparently even servers need a final confession before the archive closes.
+
+### Reflection document
+
+I created the file:
+
+`docs/environment_reflection.md`
+
+This document reflects on the full lab environment and explains how the different parts connect to real IT technician work.
+
+The document covers:
+
+* purpose of the lab
+* lab environment overview
+* what worked well
+* problems and troubleshooting
+* what I learned
+* security reflection
+* possible future improvements
+* final project reflection
+
+![Environment reflection file](screenshots/screenshot-76-part11-environment-reflection-file.png)
+
+### Lab environment overview
+
+The reflection document summarizes the three main servers used in the lab:
+
+| Server | Operating system | Purpose |
+| ------ | ---------------- | ------- |
+| `srv-linux01` | Red Hat Enterprise Linux | Linux application and administration server |
+| `srv-idm01` | Red Hat Enterprise Linux with Identity Management | Central Linux identity management server |
+| `srv-dc01` | Windows Server 2025 | Active Directory domain controller, DNS server, file server and print server |
+
+The document also explains that the servers run as virtual machines in VMware and use NAT networking. This keeps the lab separated from the physical network while still allowing the servers to communicate inside the lab.
+
+### What worked well
+
+The reflection explains that the lab successfully demonstrated several areas of IT administration.
+
+These areas include:
+
+* Linux server installation and verification
+* Windows Server installation and Active Directory configuration
+* RHEL Identity Management installation and verification
+* PowerShell and Bash scripting
+* SMB shared folders and NTFS permissions
+* Windows print server administration
+* VMware virtualization and snapshots
+* security documentation
+* support documentation
+
+This shows that the lab became a complete multi-server administration environment instead of only a single isolated server.
+
+### Problems and troubleshooting
+
+The reflection also documents the main problems that happened during the lab.
+
+Important troubleshooting examples include:
+
+| Problem | Solution |
+| ------- | -------- |
+| VMware paste corrupted long Windows commands | Used GUI tools, short manually typed commands and scripts created on the host |
+| Red Hat online repositories were unavailable | Used the mounted RHEL ISO as a local repository |
+| Linux commands were accidentally run in Windows PowerShell | Used `scp` and `ssh` to run Linux commands on the correct server |
+| Bash variable `GROUPS` conflicted with a built-in Bash variable | Renamed it to `IDM_GROUPS` |
+| Some IdM group names were rejected | Used simple lowercase alphanumeric names |
+| Microsoft Print to PDF could not be shared | Used `Generic / Text Only` with a local file-based port |
+
+This section is useful because troubleshooting is a major part of real IT technician work. The lab does not hide the problems. It shows how they were investigated and solved.
+
+### What I learned
+
+The reflection explains that the lab helped practice both technical administration and documentation.
+
+Important learning points include:
+
+* planning hostnames, IP addresses and server roles before installation
+* verifying server configuration with commands and screenshots
+* using groups instead of individual permissions
+* troubleshooting step by step instead of guessing
+* documenting both successful work and problems
+* understanding that IT work includes communication, support and security thinking
+
+This connects the technical parts of the lab to real work habits.
+
+### Security reflection
+
+The reflection document also connects the lab to security principles.
+
+Security-related parts of the lab include:
+
+* static IP planning
+* server role separation
+* Active Directory groups
+* group-based permissions
+* NTFS permission verification
+* SMB share verification
+* firewall configuration
+* Windows security logs
+* Windows Update checks
+* VMware NAT isolation
+* support and incident-related thinking
+
+The GDPR-related reflection is that personal data should only be accessible to users who need it for their work. Technical controls such as groups, permissions, logs, updates and firewalls help support that responsibility.
+
+### Future improvements
+
+The reflection document lists possible future improvements for the lab.
+
+Examples include:
+
+* add a Windows client computer joined to the domain
+* test login with Active Directory users
+* test department folder access as different users
+* deploy printers through Group Policy
+* connect `srv-linux01` to the RHEL IdM domain
+* add backup and restore testing
+* add monitoring or log collection
+* add more PowerShell automation
+* add clearer network diagrams
+* add a stronger README summary for portfolio viewers
+
+These improvements would make the lab closer to a real small organization environment.
+
+### Part 11 screenshots
+
+| Screenshot | Description |
+| ---------- | ----------- |
+| `screenshot-76-part11-environment-reflection-file.png` | Environment reflection document created in VS Code |
+
+### Part 11 status
+
+The environment reflection part is completed.
+
+The final result is:
+
+* `docs/environment_reflection.md` was created
+* the full lab environment was summarized
+* successful parts of the project were documented
+* problems and solutions were reflected on
+* learning outcomes were explained
+* security principles were connected to the technical lab work
+* future improvements were listed
+* the project was tied together as a complete portfolio lab
+
+This final part demonstrates the ability to reflect on an IT environment, explain technical decisions and connect practical server administration to real IT technician responsibilities.
