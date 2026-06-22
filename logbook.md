@@ -18,7 +18,7 @@ Initial project setup, Git repository structure, signature scripts and GitHub re
 Created the project folder, initialized Git, created the folder structure, started the main Markdown logbook, created signature scripts for Linux and Windows Server, and pushed the repository to GitHub.
 
 **Problems and solutions:**
-I first had trouble finding the correct project folder because Windows showed both OneDrive Documents and the local Documents folder. I solved this by using the full path to the project folder: `C:\Users\rband\Documents\Bjorklunda-Admin-Lab`.
+I first had trouble finding the correct project folder because Windows showed both OneDrive Documents and the local Documents folder. I solved this by using the full path to the project folder: `C:\Users\XXX\Documents\Bjorklunda-Admin-Lab`.
 
 **Decisions I made:**
 I chose to use the repository name `Bjorklunda-Admin-Lab` because this is a voluntary portfolio project and not a formal school submission.
@@ -76,24 +76,34 @@ For the shared folders, I used separate department shares and group-based permis
 ### 2026-06-22
 
 **Worked on:**
-Windows Server printing system on `srv-dc01` and preparation for virtualization documentation.
+Windows Server printing system on `srv-dc01`, virtualization documentation, and laws and security documentation for the lab environment.
 
 **What I did:**
 I completed the printing system part by installing and documenting the Print Server role, using Print Management, creating a shared lab printer, troubleshooting the Microsoft Print to PDF sharing limitation, and verifying the final shared printer with PowerShell and the network path `\\srv-dc01`.
 
-I also started the virtualization documentation for the lab environment. The virtualization part documents how VMware is used to run the lab servers, how the virtual machines are separated from the physical network with NAT, and how snapshots can be used as rollback points before making major changes.
+I also completed the virtualization documentation for the lab environment. The virtualization part documents how VMware is used to run the lab servers, how the virtual machines are separated from the physical network with NAT, and how snapshots can be used as rollback points before making major changes.
+
+After that, I completed the laws and security documentation. This part connects the technical lab setup to security principles such as least privilege, group-based access control, logging, patching, firewall rules, backups and GDPR-related responsibility for protecting personal data.
 
 **Problems and solutions:**
 The first test printer used Microsoft Print to PDF, but that printer type did not support sharing. PowerShell returned an error when I tried to enable sharing, and Print Management confirmed that sharing was not supported for that printer type. I solved this by creating a new test printer with the `Generic / Text Only` driver and a local file-based printer port.
 
+For the security documentation, I used screenshots from existing lab components instead of adding unnecessary new services. Active Directory groups, NTFS permissions, Windows security logs, Windows Update and the IdM firewall were enough to show security thinking without making the lab more complicated than needed.
+
 **Decisions I made:**
 I used a simulated test printer instead of a physical printer because the goal of this lab part was to demonstrate print server management, printer sharing, driver selection and verification. For virtualization, I kept the lab servers in VMware NAT networking because it keeps the environment isolated while still allowing the servers to communicate inside the lab network.
+
+For the security section, I focused on practical IT technician responsibilities: limiting access, documenting permissions, checking logs, keeping systems updated, using firewalls and planning for recovery. This connects the lab work to real administration and security requirements.
 
 **Sources I used:**
 
 * Microsoft documentation about Print and Document Services
 * Microsoft documentation about Print Management
+* Microsoft documentation about Active Directory security groups
+* Microsoft documentation about NTFS permissions and Windows Event Viewer
+* Red Hat documentation about firewalld
 * VMware documentation and the VMware user interface
+* General GDPR principles about protecting personal data with appropriate technical and organizational measures
 
 ---
 
@@ -2112,6 +2122,253 @@ This part demonstrates basic virtualization planning, VM documentation, network 
 
 
 ## Part 9 — Laws and security
+
+In this part I documented laws and security principles that are relevant to the Björklunda Admin Lab.
+
+The goal of this part was not to install a new server role. The goal was to connect the technical work in the lab to real IT technician responsibilities, such as protecting user data, limiting access, checking logs, patching systems and planning for recovery.
+
+The lab already includes several security-related components:
+
+* Active Directory users and groups
+* department-based NTFS permissions
+* SMB file shares
+* RHEL Identity Management
+* firewall rules
+* Windows security logs
+* Windows Update
+* VMware NAT network isolation
+
+These parts can be connected to security principles and legal responsibility.
+
+### GDPR and personal data
+
+GDPR, the General Data Protection Regulation, is important for IT administrators because many systems contain personal data.
+
+Examples of personal data in an IT environment can include:
+
+* usernames
+* names
+* email addresses
+* login records
+* group memberships
+* access logs
+* files stored in department shares
+
+An IT technician does not only make systems work. The technician also helps protect the information stored in those systems. This means using appropriate technical and organizational measures, such as access control, logging, patching, backups and secure configuration.
+
+In this lab, personal data is only simulated, but the same security thinking is still used.
+
+### Least privilege
+
+Least privilege means that users should only have the access they need to do their work.
+
+For example, an HR user should not automatically have access to Finance files, and an Education user should not automatically have access to IT administration folders.
+
+In the lab, this principle is shown by using separate department groups:
+
+| Group | Purpose |
+| ----- | ------- |
+| `GG_IT_Users` | Access group for IT users |
+| `GG_HR_Users` | Access group for HR users |
+| `GG_Finance_Users` | Access group for Finance users |
+| `GG_Education_Users` | Access group for Education users |
+
+These groups make it easier to control access based on department roles.
+
+![AD security groups](screenshots/screenshot-66-part9-ad-security-groups.png)
+
+### Group-based access control
+
+Access should be assigned to groups instead of directly to individual users.
+
+This is safer and easier to manage because:
+
+* users can be added to or removed from groups
+* permissions can be reviewed by checking group access
+* new users can receive correct access by being added to the correct group
+* administrators do not need to configure folder permissions separately for every user
+
+In this lab, department folder permissions were assigned to Active Directory groups.
+
+Example:
+
+| Folder | Group | Permission |
+| ------ | ----- | ---------- |
+| `C:\Shares\IT` | `BJORKLUNDA\GG_IT_Users` | Modify |
+| `C:\Shares\HR` | `BJORKLUNDA\GG_HR_Users` | Modify |
+| `C:\Shares\Finance` | `BJORKLUNDA\GG_Finance_Users` | Modify |
+| `C:\Shares\Education` | `BJORKLUNDA\GG_Education_Users` | Modify |
+
+The permissions were verified with:
+
+```powershell
+icacls C:\Shares\IT
+icacls C:\Shares\HR
+icacls C:\Shares\Finance
+icacls C:\Shares\Education
+```
+
+The command `icacls` shows NTFS permissions for files and folders.
+
+The output showed the matching department groups with:
+
+```text
+(OI)(CI)(M)
+```
+
+This means:
+
+| Code | Meaning |
+| ---- | ------- |
+| `OI` | Object inherit, files inside the folder inherit the permission |
+| `CI` | Container inherit, subfolders inherit the permission |
+| `M` | Modify permission |
+
+This confirms that department access is controlled by groups and inherited by files and subfolders.
+
+![NTFS permissions security verification](screenshots/screenshot-67-part9-ntfs-permissions-security.png)
+
+### Logging and monitoring
+
+Logs are important because they help administrators investigate problems and security events.
+
+On Windows Server, Event Viewer is used to view logs.
+
+I checked:
+
+`Windows Logs > Security`
+
+The Security log can include events related to logons, authentication, account activity and other security-relevant actions.
+
+In a real environment, logs can help answer questions such as:
+
+* Who logged in?
+* When did a logon happen?
+* Did a failed login occur?
+* Were there repeated authentication failures?
+* Did a service or system component report a problem?
+
+Logs do not prevent every problem, but they help administrators detect and investigate issues. Without logs, troubleshooting becomes guesswork, which is basically IT heresy with extra waiting.
+
+![Windows security logs](screenshots/screenshot-68-part9-windows-security-logs.png)
+
+### Patching and updates
+
+Keeping systems updated is an important part of security.
+
+Old systems may contain known vulnerabilities. Attackers often target systems that have not been patched, because known weaknesses are easier to exploit.
+
+On Windows Server, Windows Update is used to check for and install updates.
+
+I checked Windows Update on `srv-dc01` as part of the security documentation.
+
+![Windows Update security check](screenshots/screenshot-69-part9-windows-update-security.png)
+
+Patching is important for:
+
+* security fixes
+* bug fixes
+* stability improvements
+* driver updates
+* protection against known vulnerabilities
+
+In a real organization, updates should be planned carefully so important services are not interrupted without warning.
+
+### Firewall rules
+
+Firewalls help control which network traffic is allowed to reach a server.
+
+On RHEL systems, `firewalld` can be managed with the `firewall-cmd` command.
+
+I checked the firewall on `srv-idm01` with:
+
+```bash
+sudo firewall-cmd --list-all
+```
+
+The command `sudo firewall-cmd --list-all` shows the active firewall zone, allowed services, ports and interfaces.
+
+This is important because `srv-idm01` runs identity-related services such as DNS, Kerberos and LDAP. Only required services should be allowed through the firewall.
+
+![IdM firewall security configuration](screenshots/screenshot-70-part9-idm-firewall-security.png)
+
+### Backups and recovery
+
+Backups are important because systems can fail, files can be deleted, malware can damage data and administrators can make mistakes.
+
+In this lab, VMware snapshots are used as a simple recovery method. A snapshot is not the same as a full backup, but it is useful in a lab because it allows a virtual machine to be restored to an earlier state.
+
+In a real environment, backups should be stored separately from the system being protected. Backups should also be tested so administrators know that recovery actually works.
+
+Important backup principles:
+
+* backup important data regularly
+* store backups separately
+* protect backups from unauthorized access
+* test restore procedures
+* document recovery steps
+
+### Network isolation
+
+The lab uses VMware NAT networking.
+
+NAT helps isolate the virtual lab from the physical network. This is useful because the lab contains services such as Active Directory, DNS, IdM, file sharing and print sharing.
+
+Keeping the lab isolated reduces the risk of test services affecting the real network.
+
+The lab network still allows the virtual machines to communicate with each other:
+
+| Server | IP address |
+| ------ | ---------- |
+| `srv-linux01` | `192.168.80.10` |
+| `srv-idm01` | `192.168.80.11` |
+| `srv-dc01` | `192.168.80.12` |
+
+This allows testing without exposing the lab services directly to the home network.
+
+### Security connection to earlier lab parts
+
+The previous parts of the lab connect to security in several ways:
+
+| Lab part | Security connection |
+| -------- | ------------------- |
+| Active Directory | Central management of users, groups and authentication |
+| IdM | Central management of Linux identities and Kerberos authentication |
+| Shared folders | Department-based access control |
+| NTFS permissions | File-level permission enforcement |
+| Print server | Centralized printer management and printer permissions |
+| VMware virtualization | Isolated test environment and snapshots |
+| Firewalls | Control which services can be reached |
+| Logs | Support troubleshooting and incident investigation |
+| Updates | Reduce exposure to known vulnerabilities |
+
+### Part 9 screenshots
+
+| Screenshot | Description |
+| ---------- | ----------- |
+| `screenshot-66-part9-ad-security-groups.png` | Active Directory security groups used for access control |
+| `screenshot-67-part9-ntfs-permissions-security.png` | NTFS permissions showing group-based folder access |
+| `screenshot-68-part9-windows-security-logs.png` | Windows Event Viewer Security log |
+| `screenshot-69-part9-windows-update-security.png` | Windows Update security view |
+| `screenshot-70-part9-idm-firewall-security.png` | RHEL IdM firewall security configuration |
+
+### Part 9 status
+
+The laws and security part is completed.
+
+The final result is:
+
+* GDPR-related security responsibility was explained
+* least privilege was explained
+* Active Directory groups were documented as access-control evidence
+* NTFS permissions were verified as group-based access control
+* Windows security logs were documented
+* Windows Update was documented as part of patch management
+* the IdM firewall was documented as network security evidence
+* backups and recovery were explained
+* VMware NAT isolation was connected to lab security
+
+This part demonstrates how the technical lab work connects to laws, security principles and practical IT administration responsibility.
 
 ## Part 10 — Advice and support
 
