@@ -73,6 +73,30 @@ For the shared folders, I used separate department shares and group-based permis
 
 ---
 
+### 2026-06-22
+
+**Worked on:**
+Windows Server printing system on `srv-dc01` and preparation for virtualization documentation.
+
+**What I did:**
+I completed the printing system part by installing and documenting the Print Server role, using Print Management, creating a shared lab printer, troubleshooting the Microsoft Print to PDF sharing limitation, and verifying the final shared printer with PowerShell and the network path `\\srv-dc01`.
+
+I also started the virtualization documentation for the lab environment. The virtualization part documents how VMware is used to run the lab servers, how the virtual machines are separated from the physical network with NAT, and how snapshots can be used as rollback points before making major changes.
+
+**Problems and solutions:**
+The first test printer used Microsoft Print to PDF, but that printer type did not support sharing. PowerShell returned an error when I tried to enable sharing, and Print Management confirmed that sharing was not supported for that printer type. I solved this by creating a new test printer with the `Generic / Text Only` driver and a local file-based printer port.
+
+**Decisions I made:**
+I used a simulated test printer instead of a physical printer because the goal of this lab part was to demonstrate print server management, printer sharing, driver selection and verification. For virtualization, I kept the lab servers in VMware NAT networking because it keeps the environment isolated while still allowing the servers to communicate inside the lab network.
+
+**Sources I used:**
+
+* Microsoft documentation about Print and Document Services
+* Microsoft documentation about Print Management
+* VMware documentation and the VMware user interface
+
+---
+
 ## Part 1 — Preparation and repository setup
 
 I created the project folder `Bjorklunda-Admin-Lab` on my Windows computer and initialized it as a Git repository.
@@ -1909,7 +1933,6 @@ The Security tab is used to control who can print, manage the printer and manage
 
 This is important in a real environment because printer access can be controlled with users and groups, in a similar way to folder permissions.
 
-![Printer security tab](screenshots/screenshot-54-srv-dc01-printer-security-tab.png)
 
 ### Part 7 screenshots
 
@@ -1944,6 +1967,149 @@ This part demonstrates basic Windows Server print server administration, printer
 
 
 ## Part 8 — Virtualization
+
+In this part I documented the virtualization setup used for the Björklunda Admin Lab.
+
+The goal of this part is to show how the lab environment is built with virtual machines instead of physical servers. Virtualization makes it possible to run several separate servers on one computer. Each virtual machine has its own operating system, virtual hardware, disk and network adapter.
+
+For this lab, VMware is used to run the server environment.
+
+### Virtualization platform
+
+The virtualization program used for the lab is VMware.
+
+VMware is used to create and run virtual machines. A virtual machine behaves like a separate computer, but it runs inside the host computer. This makes it useful for testing server administration, networking, Active Directory, Linux services and troubleshooting without needing several physical servers.
+
+The lab uses three main virtual machines:
+
+| Virtual machine | Operating system | Purpose |
+| --------------- | ---------------- | ------- |
+| `srv-linux01` | Red Hat Enterprise Linux | Linux application and administration server |
+| `srv-idm01` | Red Hat Enterprise Linux with Identity Management | Central Linux identity management server |
+| `srv-dc01` | Windows Server 2025 | Active Directory domain controller, DNS server, file server and print server |
+
+![VMware lab VM overview](screenshots/screenshot-57-vmware-lab-vm-overview.png)
+
+### Why virtualization is useful in this lab
+
+Virtualization is useful because it allows the whole Björklunda environment to be built safely on one physical computer.
+
+Instead of needing separate physical machines for Linux, IdM and Windows Server, VMware provides virtual hardware for each server. This makes the lab easier to build, reset, document and continue later.
+
+Virtualization is especially useful for this project because:
+
+* each server can be installed and configured separately
+* mistakes can be isolated to one virtual machine
+* snapshots can be used as rollback points
+* the lab can be kept away from the real home network
+* different operating systems can run at the same time
+* screenshots can clearly show the server design and configuration
+
+### Virtual machine settings
+
+Each virtual machine has its own virtual hardware settings. These settings control how much memory, CPU, disk space and network access the virtual machine receives from the host computer.
+
+### `srv-linux01` VM settings
+
+`srv-linux01` is the Linux server used for general RHEL administration tasks.
+
+The VMware settings for this VM show its assigned memory, processors, hard disk and network adapter.
+
+![srv-linux01 VM settings](screenshots/screenshot-58-srv-linux01-vm-settings.png)
+
+### `srv-idm01` VM settings
+
+`srv-idm01` is the RHEL Identity Management server.
+
+Because this server provides identity-related services such as Kerberos, LDAP and DNS, it is important to document its virtual hardware and network configuration.
+
+![srv-idm01 VM settings](screenshots/screenshot-59-srv-idm01-vm-settings.png)
+
+### `srv-dc01` VM settings
+
+`srv-dc01` is the Windows Server domain controller.
+
+This server is used for Active Directory, DNS, department file shares, NTFS permissions and the lab printing system. Documenting its virtual hardware helps explain the server design and resource allocation.
+
+![srv-dc01 VM settings](screenshots/screenshot-60-srv-dc01-vm-settings.png)
+
+### Network mode
+
+The virtual machines use VMware NAT networking.
+
+NAT means Network Address Translation. In VMware, NAT allows the virtual machines to access the network through the host computer while keeping the lab separated from the physical network.
+
+This is useful because the lab contains server services such as Active Directory, DNS, SMB file shares, RHEL IdM and print sharing. Keeping these services inside a NAT-based lab network reduces the risk of interfering with the real home network.
+
+The lab network uses these server IP addresses:
+
+| Server | IP address |
+| ------ | ---------- |
+| `srv-linux01` | `192.168.80.10` |
+| `srv-idm01` | `192.168.80.11` |
+| `srv-dc01` | `192.168.80.12` |
+
+
+### Snapshots
+
+VMware snapshots are used as rollback points.
+
+A snapshot saves the state of a virtual machine at a specific moment. If a later configuration breaks the server, the snapshot can be used to return the VM to the earlier working state.
+
+Snapshots are useful in a lab environment because they make it safer to test configurations, install roles, change services and troubleshoot problems.
+
+A snapshot was previously created for `srv-linux01` after the Linux installation and verification were completed.
+
+Snapshot name:
+
+`Part 3 complete - srv-linux01 installed and verified`
+
+![VMware snapshot manager](screenshots/screenshot-62-vmware-snapshot-manager.png)
+
+### Optional snapshot after Part 7
+
+After completing the Windows Server file sharing and printing system parts, a snapshot can also be created for `srv-dc01`.
+
+Recommended snapshot name:
+
+`Part 7 complete - file shares and print server configured`
+
+Recommended description:
+
+`srv-dc01 configured with Active Directory, DNS, department SMB shares, NTFS permissions and shared test printer.`
+
+This snapshot is useful because `srv-dc01` now has several important completed roles. If something breaks later, the server can be restored to the state where Active Directory, file shares and printing were working.
+
+
+### Part 8 screenshots
+
+| Screenshot | Description |
+| ---------- | ----------- |
+| `screenshot-57-vmware-lab-vm-overview.png` | VMware overview showing the lab virtual machines |
+| `screenshot-58-srv-linux01-vm-settings.png` | Virtual hardware settings for `srv-linux01` |
+| `screenshot-59-srv-idm01-vm-settings.png` | Virtual hardware settings for `srv-idm01` |
+| `screenshot-60-srv-dc01-vm-settings.png` | Virtual hardware settings for `srv-dc01` |
+| `screenshot-61-vmware-nat-network-setting.png` | VMware NAT network setting |
+| `screenshot-62-vmware-snapshot-manager.png` | VMware Snapshot Manager |
+| `screenshot-63-srv-dc01-part7-snapshot.png` | Optional snapshot after Part 7 |
+
+### Part 8 status
+
+Part 8 documents the virtualization platform and lab VM structure.
+
+The final result is:
+
+* VMware is documented as the virtualization platform
+* the three lab virtual machines are listed and explained
+* the purpose of each VM is documented
+* virtual hardware settings are documented with screenshots
+* NAT networking is explained
+* the lab IP address plan is documented
+* snapshots are explained as rollback points
+* a recommended `srv-dc01` snapshot after Part 7 is documented
+
+This part demonstrates basic virtualization planning, VM documentation, network isolation and snapshot usage in an IT administration lab.
+
 
 ## Part 9 — Laws and security
 
