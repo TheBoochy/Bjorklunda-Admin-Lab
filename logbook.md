@@ -1725,6 +1725,224 @@ This part demonstrates basic Windows Server file sharing, SMB shares, NTFS permi
 
 ## Part 7 — Printing system
 
+In this part I configured and documented a basic printing system on the Windows Server domain controller `srv-dc01`.
+
+The goal of this part was to show how a Windows Server can be used as a central print server. In a real organization, a print server makes printer management easier because printers, printer queues, printer drivers, sharing and permissions can be managed from one central place instead of being configured separately on every client computer.
+
+### Print server role
+
+I installed the Windows Server role:
+
+`Print and Document Services`
+
+The selected role service was:
+
+`Print Server`
+
+The Print Server role allows Windows Server to manage printers, printer queues, printer drivers and shared printers.
+
+This role was installed through Server Manager by using:
+
+`Manage > Add Roles and Features`
+
+Server Manager is the main Windows Server administration tool. It is used to install roles and features, check server status and open administrative consoles.
+
+![Print Server role selected](screenshots/screenshot-48-srv-dc01-print-server-role-selected.png)
+
+After the installation completed, the Print Server role was ready to use on `srv-dc01`.
+
+![Print Server role installed](screenshots/screenshot-49-srv-dc01-print-server-role-installed.png)
+
+### Print Management
+
+After installing the role, I opened Print Management from Server Manager:
+
+`Tools > Print Management`
+
+Print Management is a Windows Server administration console used to manage print servers, printers, printer drivers, ports, forms and deployed printers.
+
+I used Print Management to create and share a lab test printer.
+
+![Print Management opened](screenshots/screenshot-50-srv-dc01-print-management-open.png)
+
+### First printer attempt
+
+The first test printer was created with the Microsoft Print to PDF driver.
+
+Printer name:
+
+`Bjorklunda-Test-Printer`
+
+The printer was visible in Print Management and PowerShell, but it was not shared.
+
+PowerShell command used:
+
+```powershell
+Get-Printer
+```
+
+The command `Get-Printer` lists printers installed on the Windows Server.
+
+The output showed that `Bjorklunda-Test-Printer` existed, but the `Shared` column showed:
+
+```text
+False
+```
+
+I tried to enable sharing with:
+
+```powershell
+Set-Printer -Name "Bjorklunda-Test-Printer" -Shared $true -ShareName "Bjorklunda-Test-Printer"
+```
+
+The command `Set-Printer` changes settings on an existing printer. In this case, it was used to try to enable printer sharing and set the share name.
+
+This failed with the error:
+
+```text
+HRESULT 0x80070bce
+```
+
+I then checked the printer properties in Print Management. The Sharing tab showed:
+
+```text
+Sharing is not supported for this type of printer.
+```
+
+This confirmed that the problem was not caused by permissions or by the PowerShell syntax. The Microsoft Print to PDF printer type did not support sharing in this setup.
+
+![Microsoft Print to PDF sharing not supported](screenshots/screenshot-52a-srv-dc01-print-to-pdf-sharing-not-supported.png)
+
+### Troubleshooting solution
+
+To solve the problem, I deleted the first test printer and created a new dummy printer with a simpler driver and local port.
+
+I created a folder for dummy print output:
+
+```powershell
+New-Item -ItemType Directory -Path C:\PrintTest
+```
+
+The command `New-Item` creates a new item in PowerShell.
+
+The option `-ItemType Directory` tells PowerShell to create a folder.
+
+The option `-Path C:\PrintTest` tells PowerShell where the folder should be created.
+
+This folder was used as a local destination for the test printer output.
+
+### Final test printer
+
+I created a new printer in Print Management by using the Network Printer Installation Wizard.
+
+The printer was created with these settings:
+
+| Setting | Value |
+| ------- | ----- |
+| Printer name | `Bjorklunda-Test-Printer` |
+| Share name | `Bjorklunda-Test-Printer` |
+| Driver | `Generic / Text Only` |
+| Port type | Local Port |
+| Port name | `C:\PrintTest\Bjorklunda-Test-Printer.prn` |
+| Location | `srv-dc01` |
+| Comment | Lab test printer for Bjorklunda Admin Lab Part 7 |
+
+The `Generic / Text Only` driver was used because it is a simple built-in Windows printer driver. It does not require a specific physical printer model and is suitable for a lab test printer.
+
+The Local Port sends the print output to a file path instead of a physical printer. This made it possible to document a shared printer without needing real printer hardware.
+
+![Test printer created](screenshots/screenshot-51-srv-dc01-test-printer-created.png)
+
+### Printer sharing
+
+The printer was shared with the share name:
+
+`Bjorklunda-Test-Printer`
+
+This means the printer can be accessed through the network path:
+
+```text
+\\srv-dc01\Bjorklunda-Test-Printer
+```
+
+The printer name and the share name were kept the same to make the setup easier to understand and easier to document.
+
+### PowerShell verification
+
+I verified the printer with PowerShell:
+
+```powershell
+Get-Printer | Where-Object {$_.Name -like "*Bjorklunda*"}
+```
+
+The command `Get-Printer` lists printers installed on the server.
+
+The pipe symbol `|` sends the printer list to the next command.
+
+The command `Where-Object {$_.Name -like "*Bjorklunda*"}` filters the result so only printers with `Bjorklunda` in the name are shown.
+
+The verification showed that `Bjorklunda-Test-Printer` existed and was shared.
+
+![Printer verified with PowerShell](screenshots/screenshot-52-srv-dc01-printer-powershell-verification.png)
+
+### Network path verification
+
+I also verified the shared printer through File Explorer by opening:
+
+```text
+\\srv-dc01
+```
+
+This network path shows shared resources published by `srv-dc01`.
+
+The shared printer was visible together with the existing shared folders and domain shares.
+
+This confirmed that the printer was published over the network.
+
+![Printer visible through network path](screenshots/screenshot-53-srv-dc01-printer-share-network-path.png)
+
+### Printer permissions
+
+I checked the printer security settings in Print Management.
+
+The Security tab is used to control who can print, manage the printer and manage documents in the print queue.
+
+This is important in a real environment because printer access can be controlled with users and groups, in a similar way to folder permissions.
+
+![Printer security tab](screenshots/screenshot-54-srv-dc01-printer-security-tab.png)
+
+### Part 7 screenshots
+
+| Screenshot | Description |
+| ---------- | ----------- |
+| `screenshot-48-srv-dc01-print-server-role-selected.png` | Print Server role selected in Server Manager |
+| `screenshot-49-srv-dc01-print-server-role-installed.png` | Print Server role installation completed |
+| `screenshot-50-srv-dc01-print-management-open.png` | Print Management console opened |
+| `screenshot-51-srv-dc01-test-printer-created.png` | Test printer created in Print Management |
+| `screenshot-52a-srv-dc01-print-to-pdf-sharing-not-supported.png` | Microsoft Print to PDF sharing limitation documented |
+| `screenshot-52-srv-dc01-printer-powershell-verification.png` | Printer verified with PowerShell |
+| `screenshot-53-srv-dc01-printer-share-network-path.png` | Printer visible through `\\srv-dc01` |
+| `screenshot-54-srv-dc01-printer-security-tab.png` | Printer security settings shown |
+
+### Part 7 status
+
+The printing system part is completed.
+
+The final result is:
+
+* the Print Server role was installed on `srv-dc01`
+* Print Management was opened and used
+* the Microsoft Print to PDF sharing limitation was documented
+* a new lab printer was created with the `Generic / Text Only` driver
+* the printer was configured with a local file-based port
+* the printer was shared as `Bjorklunda-Test-Printer`
+* the printer was verified with PowerShell
+* the printer was verified through the network path `\\srv-dc01`
+* printer security settings were documented
+
+This part demonstrates basic Windows Server print server administration, printer sharing, printer driver selection, printer ports, troubleshooting and verification.
+
+
 ## Part 8 — Virtualization
 
 ## Part 9 — Laws and security
